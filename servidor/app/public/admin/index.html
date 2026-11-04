@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rádio Tec · Painel de programação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="dot" id="airDot"></span><strong id="stationName">Rádio Tec</strong><span class="muted">Programação</span></div>
+  <nav id="tabs">
+    <button data-tab="noar" class="on">No ar</button>
+    <button data-tab="biblioteca">Biblioteca</button>
+    <button data-tab="relogios">Relógios</button>
+    <button data-tab="grade">Grade</button>
+    <button data-tab="relatorios">Relatórios</button>
+  </nav>
+</header>
+
+<main>
+  <!-- NO AR -->
+  <section id="noar" class="tab on">
+    <div class="onair card">
+      <div class="label" id="onairLabel">TOCANDO AGORA</div>
+      <h1 id="npTitle">Aguardando o motor de playout…</h1>
+      <p id="npArtist" class="muted"></p>
+      <div class="chips" id="npChips"></div>
+    </div>
+    <div class="cols">
+      <div class="card">
+        <div class="cardhead"><h2>Próxima hora (prévia)</h2><button class="ghost" id="refreshNext">Atualizar</button></div>
+        <ol class="timeline" id="nextList"></ol>
+      </div>
+      <div class="card">
+        <div class="cardhead"><h2>Tocou recentemente</h2></div>
+        <ol class="timeline" id="logList"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- BIBLIOTECA -->
+  <section id="biblioteca" class="tab">
+    <div class="card">
+      <div class="cardhead"><h2>Enviar arquivos</h2></div>
+      <div class="row">
+        <label>Categoria <select id="upCat"></select></label>
+        <label class="drop" id="drop">
+          <input type="file" id="upFiles" multiple accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus">
+          <span>Arraste os áudios aqui ou clique para escolher</span>
+        </label>
+      </div>
+      <p class="hint">Hora certa: nomeie o título com a hora, ex. <code>Hora certa 14h</code>. Um arquivo sem número serve para qualquer hora.</p>
+      <div id="upStatus" class="muted"></div>
+    </div>
+    <div class="card">
+      <div class="cardhead">
+        <h2>Acervo <span class="muted" id="libCount"></span></h2>
+        <div class="row">
+          <input id="libSearch" placeholder="Buscar título, artista, álbum">
+          <select id="libCat"><option value="">Todas as categorias</option></select>
+        </div>
+      </div>
+      <div class="tablewrap"><table class="lib">
+        <thead><tr><th></th><th>Título</th><th>Artista</th><th>Categoria</th><th>Duração</th><th>Volume</th><th>Tocou</th><th>Ativa</th><th></th></tr></thead>
+        <tbody id="libBody"></tbody>
+      </table></div>
+      <audio id="preview" controls hidden></audio>
+    </div>
+  </section>
+
+  <!-- RELÓGIOS -->
+  <section id="relogios" class="tab">
+    <div class="cols cols-side">
+      <div class="card">
+        <div class="cardhead"><h2>Relógios</h2><button id="newClock">+ Novo</button></div>
+        <p class="hint">Um relógio é o modelo de uma hora: a sequência de músicas, vinhetas, comerciais e hora certa. Ele recomeça no início de cada hora.</p>
+        <ul class="clocklist" id="clockList"></ul>
+      </div>
+      <div class="card" id="clockEditor" hidden>
+        <div class="row">
+          <input id="ckName" placeholder="Nome do relógio">
+          <input id="ckColor" type="color">
+          <label class="check"><input type="checkbox" id="ckDefault"> Padrão da rádio</label>
+        </div>
+        <ol class="items" id="ckItems"></ol>
+        <div class="row">
+          <select id="ckAddCat"></select>
+          <input id="ckAddGenre" placeholder="Gênero (opcional)">
+          <button class="ghost" id="ckAdd">+ Categoria</button>
+          <select id="ckAddTrack"></select>
+          <button class="ghost" id="ckAddT">+ Faixa fixa</button>
+        </div>
+        <div class="row end">
+          <span class="muted" id="ckEstimate"></span>
+          <button class="danger ghost" id="ckDel">Excluir</button>
+          <button id="ckSave">Salvar relógio</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GRADE -->
+  <section id="grade" class="tab">
+    <div class="card">
+      <div class="cardhead">
+        <h2>Grade semanal</h2>
+        <div class="row">
+          <button id="newSlot">+ Faixa na grade</button>
+          <button class="ghost" id="copyDay">Copiar um dia</button>
+        </div>
+      </div>
+      <p class="hint">Horários sem faixa tocam o relógio padrão. <span class="leg relogio">Relógio</span> <span class="leg programa">Programa gravado</span> <span class="leg aovivo">Janela ao vivo</span></p>
+      <div class="week" id="week"></div>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h2>Simular a programação</h2>
+        <div class="row"><input type="datetime-local" id="simFrom"><select id="simHours"><option>1</option><option selected>3</option><option>6</option><option>12</option><option>24</option></select><button class="ghost" id="simRun">Simular</button></div>
+      </div>
+      <ol class="timeline" id="simList"></ol>
+    </div>
+  </section>
+
+  <!-- RELATÓRIOS -->
+  <section id="relatorios" class="tab">
+    <div class="cols">
+      <div class="card">
+        <div class="cardhead"><h2>Relatório de execução (ECAD)</h2></div>
+        <p class="hint">Planilha com data, hora, título, intérprete, compositor, ISRC e duração de cada música executada.</p>
+        <div class="row">
+          <label>De <input type="date" id="repFrom"></label>
+          <label>Até <input type="date" id="repTo"></label>
+          <label class="check"><input type="checkbox" id="repAll"> Incluir vinhetas e comerciais</label>
+        </div>
+        <div class="row end"><button id="repDl">Baixar planilha (.csv)</button></div>
+      </div>
+      <div class="card">
+        <div class="cardhead"><h2>Configurações</h2></div>
+        <label class="stack">Nome da rádio <input id="setName"></label>
+        <label class="stack">Mesma música não repete antes de (min) <input type="number" id="setSong" min="0"></label>
+        <label class="stack">Mesmo artista não repete antes de (min) <input type="number" id="setArtist" min="0"></label>
+        <label class="stack">Proteger início de programa (min antes) <input type="number" id="setProtect" min="0"></label>
+        <div class="row end"><button id="setSave">Salvar</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Modal da faixa da grade -->
+<dialog id="slotDlg">
+  <form method="dialog" id="slotForm">
+    <h2 id="slotDlgTitle">Faixa na grade</h2>
+    <label class="stack">Título <input id="slTitle" required placeholder="Ex.: Manhã Tec"></label>
+    <div class="row">
+      <label>Tipo
+        <select id="slKind">
+          <option value="relogio">Relógio (automação)</option>
+          <option value="programa">Programa gravado</option>
+          <option value="aovivo">Janela ao vivo</option>
+        </select>
+      </label>
+      <label>Início <input type="time" id="slStart" required></label>
+      <label>Fim <input type="time" id="slEnd" required></label>
+    </div>
+    <div class="days" id="slDays"></div>
+    <label class="stack">Relógio <span class="muted" id="slClockHint"></span><select id="slClock"></select></label>
+    <div id="slProgBox">
+      <label class="stack">Arquivos do programa, na ordem
+        <div class="row"><select id="slAddItem"></select><button type="button" class="ghost" id="slAdd">Adicionar</button></div>
+      </label>
+      <ol class="items" id="slItems"></ol>
+    </div>
+    <p class="error" id="slErr"></p>
+    <div class="row end">
+      <button type="button" class="danger ghost" id="slDel">Excluir</button>
+      <button type="button" class="ghost" id="slCancel">Cancelar</button>
+      <button type="submit" id="slSave">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="copyDlg">
+  <form method="dialog" id="copyForm">
+    <h2>Copiar a grade de um dia</h2>
+    <label class="stack">Copiar de <select id="cpFrom"></select></label>
+    <p class="hint">Para (substitui a grade desses dias):</p>
+    <div class="days" id="cpTo"></div>
+    <div class="row end"><button type="button" class="ghost" id="cpCancel">Cancelar</button><button type="submit">Copiar</button></div>
+  </form>
+</dialog>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

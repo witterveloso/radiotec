@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Rádio Tec · Painel de programação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="dot on"></span><strong>Rádio Tec</strong><span class="muted">Painel</span> <span class="pill" id="dirty" hidden>alterações não publicadas</span></div>
+  <nav id="tabs">
+    <button data-tab="grade" class="on">Grade</button>
+    <button data-tab="relogios">Relógios</button>
+    <button data-tab="acervo">Acervo</button>
+    <button data-tab="previa">Prévia</button>
+    <button data-tab="relatorio">Relatório ECAD</button>
+    <button data-tab="publicar">Publicar</button>
+  </nav>
+</header>
+
+<main>
+  <section id="grade" class="tab on">
+    <div class="card">
+      <div class="cardhead">
+        <h2>Grade semanal</h2>
+        <div class="row"><button id="newSlot">+ Faixa na grade</button></div>
+      </div>
+      <p class="hint">Clique num horário vazio para criar. Horários sem faixa tocam o relógio padrão. <span class="leg relogio">Relógio</span> <span class="leg programa">Programa gravado</span> <span class="leg aovivo">Janela ao vivo</span></p>
+      <div class="week" id="week"></div>
+    </div>
+  </section>
+
+  <section id="relogios" class="tab">
+    <div class="cols cols-side">
+      <div class="card">
+        <div class="cardhead"><h2>Relógios</h2><button id="newClock">+ Novo</button></div>
+        <p class="hint">Um relógio é o modelo de uma hora. Ele recomeça no início de cada hora; a hora certa só toca nos primeiros 5 minutos.</p>
+        <ul class="clocklist" id="clockList"></ul>
+      </div>
+      <div class="card" id="clockEditor" hidden>
+        <div class="row">
+          <input id="ckName" placeholder="Nome do relógio">
+          <label class="check"><input type="checkbox" id="ckDefault"> Padrão da rádio</label>
+        </div>
+        <ol class="items" id="ckItems"></ol>
+        <div class="row">
+          <select id="ckAddCat"></select>
+          <input id="ckAddGenre" placeholder="Gênero (opcional)">
+          <button class="ghost" id="ckAdd">+ Adicionar</button>
+        </div>
+        <div class="row end">
+          <span class="muted" id="ckEstimate"></span>
+          <button class="danger ghost" id="ckDel">Excluir</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="acervo" class="tab">
+    <div class="card">
+      <div class="cardhead"><h2>Enviar áudios</h2></div>
+      <p class="hint">Os áudios ficam no GitHub, na pasta <code>acervo</code>. Cada botão abre a pasta certa: arraste os arquivos e clique em <b>Commit changes</b>. Em poucos minutos a rádio é atualizada sozinha.</p>
+      <div class="folders" id="folders"></div>
+      <div class="row" style="margin-top:14px">
+        <label>Novo programa <input id="progSlug" placeholder="ex.: bom-dia-tec"></label>
+        <a class="btn ghost" id="progUp" target="_blank" rel="noopener">Enviar arquivos do programa</a>
+      </div>
+      <p class="hint">Programas: os arquivos tocam em ordem alfabética, então numere os blocos (<code>01-bloco.mp3</code>, <code>02-bloco.mp3</code>). Hora certa: nomeie com a hora (<code>14h.mp3</code>).</p>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h2>No ar agora <span class="muted" id="acCount"></span></h2>
+        <div class="row"><input id="acSearch" placeholder="Buscar"><select id="acCat"><option value="">Todas</option></select></div>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Título</th><th>Artista</th><th>Categoria</th><th>Programa / gênero</th><th>Duração</th><th>Arquivo</th></tr></thead>
+        <tbody id="acBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="previa" class="tab">
+    <div class="card">
+      <div class="cardhead"><h2>Programação publicada</h2>
+        <div class="row"><input type="date" id="pvDate"><select id="pvFrom"></select><button class="ghost" id="pvGo">Ver</button></div>
+      </div>
+      <p class="hint" id="pvInfo"></p>
+      <ol class="timeline" id="pvList"></ol>
+    </div>
+  </section>
+
+  <section id="relatorio" class="tab">
+    <div class="card">
+      <div class="cardhead"><h2>Relatório de execução (ECAD)</h2></div>
+      <p class="hint">Gera a planilha com data, hora, título, intérprete, compositor, ISRC e duração de cada música da programação no período. Preencha compositor e ISRC nas tags dos MP3 para o relatório sair completo.</p>
+      <div class="row">
+        <label>De <input type="date" id="repFrom"></label>
+        <label>Até <input type="date" id="repTo"></label>
+        <label class="check"><input type="checkbox" id="repAll"> Incluir vinhetas e comerciais</label>
+        <button id="repDl">Baixar planilha (.csv)</button>
+      </div>
+      <p class="hint" id="repInfo"></p>
+    </div>
+  </section>
+
+  <section id="publicar" class="tab">
+    <div class="cols">
+      <div class="card">
+        <div class="cardhead"><h2>Publicar a nova programação</h2></div>
+        <ol class="steps">
+          <li>Clique em <b>Copiar e abrir no GitHub</b>.</li>
+          <li>No GitHub, apague todo o texto do arquivo (Ctrl+A) e cole (Ctrl+V).</li>
+          <li>Clique em <b>Commit changes</b>.</li>
+          <li>Em 3 a 5 minutos a rádio passa a tocar a nova grade.</li>
+        </ol>
+        <div class="row end">
+          <button class="ghost" id="pubDiscard">Descartar alterações</button>
+          <button id="pubGo">Copiar e abrir no GitHub</button>
+        </div>
+        <p class="hint" id="pubInfo"></p>
+      </div>
+      <div class="card">
+        <div class="cardhead"><h2>Configurações</h2></div>
+        <label class="stack">Nome da rádio <input id="setName"></label>
+        <label class="stack">Slogan <input id="setSlogan"></label>
+        <label class="stack">Mesma música não repete antes de (min) <input type="number" id="setSong" min="0"></label>
+        <label class="stack">Mesmo artista não repete antes de (min) <input type="number" id="setArtist" min="0"></label>
+        <label class="stack">Repositório no GitHub <input id="setRepo" placeholder="usuario/radiotec"></label>
+      </div>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h2>programacao.json</h2></div>
+      <textarea id="pubJson" readonly></textarea>
+    </div>
+  </section>
+</main>
+
+<dialog id="slotDlg">
+  <form method="dialog" id="slotForm">
+    <h2 id="slotDlgTitle">Faixa na grade</h2>
+    <label class="stack">Título <input id="slTitle" required placeholder="Ex.: Manhã Tec"></label>
+    <div class="row">
+      <label>Tipo
+        <select id="slKind">
+          <option value="relogio">Relógio (automação)</option>
+          <option value="programa">Programa gravado</option>
+          <option value="aovivo">Janela ao vivo</option>
+        </select>
+      </label>
+      <label>Início <input type="time" id="slStart" required></label>
+      <label>Fim <input type="time" id="slEnd" required></label>
+    </div>
+    <div class="days" id="slDays"></div>
+    <label class="stack">Relógio <span class="muted" id="slClockHint"></span><select id="slClock"></select></label>
+    <label class="stack" id="slProgBox">Pasta do programa (acervo/programas/…) <select id="slProg"></select></label>
+    <label class="stack" id="slLinkBox">Link da transmissão ao vivo (YouTube, Instagram) <input id="slLink" placeholder="https://"></label>
+    <p class="error" id="slErr"></p>
+    <div class="row end">
+      <button type="button" class="danger ghost" id="slDel">Excluir</button>
+      <button type="button" class="ghost" id="slCancel">Cancelar</button>
+      <button type="submit">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

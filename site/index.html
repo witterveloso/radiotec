@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rádio Tec · No ar 24 horas</title>
+<meta name="description" content="Rádio Tec: música, programas e podcasts 24 horas por dia.">
+<meta name="theme-color" content="#07080f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%236d5dfc'/><path d='M24 18v28l22-14z' fill='white'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#07080f; --line:#232842; --text:#eef0f8; --muted:#8c92ad; --a:#6d5dfc; --b:#22d3ee; --red:#ef4444; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #241c6b 0%, transparent 60%), radial-gradient(900px 500px at 110% 10%, #0b4a5c 0%, transparent 55%), var(--bg); color:var(--text); font:15px/1.5 Inter, system-ui, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 36px; gap: 12px; }
+  .logo { font-weight:800; font-size:22px; letter-spacing:-.03em; }
+  .logo span { background: linear-gradient(90deg, var(--a), var(--b)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .badge { font-size:12px; font-weight:700; letter-spacing:.12em; padding:6px 12px; border-radius:99px; border:1px solid var(--line); color:var(--muted); white-space: nowrap; }
+  .player { display:grid; grid-template-columns: 160px 1fr; gap: 28px; align-items:center; padding: 28px; border:1px solid var(--line); border-radius: 24px; background: rgba(17,20,34,.7); backdrop-filter: blur(10px); }
+  .play { width:160px; height:160px; border-radius:50%; border:0; cursor:pointer; background: conic-gradient(from 200deg, var(--a), var(--b), var(--a)); display:grid; place-items:center; box-shadow: 0 20px 60px rgba(109,93,252,.35); transition: transform .15s; }
+  .play:hover { transform: scale(1.03); }
+  .play svg { width:56px; height:56px; fill:#fff; }
+  .eq { display:flex; gap:4px; align-items:flex-end; height:18px; margin-bottom:10px; }
+  .eq i { width:4px; background: var(--b); border-radius:2px; height:4px; }
+  .playing .eq i { animation: eq .9s infinite ease-in-out; } .eq i:nth-child(2){animation-delay:.2s} .eq i:nth-child(3){animation-delay:.4s} .eq i:nth-child(4){animation-delay:.1s}
+  @keyframes eq { 50% { height:18px; } }
+  .np-label { font-size:12px; letter-spacing:.14em; font-weight:700; color: var(--b); }
+  h1 { font-size: clamp(24px, 4vw, 38px); margin: 6px 0 4px; letter-spacing:-.03em; line-height:1.15; }
+  .artist { color: var(--muted); font-size: 18px; margin:0; }
+  .bar { height: 4px; background: var(--line); border-radius: 4px; margin-top: 16px; overflow: hidden; max-width: 420px; }
+  .bar i { display:block; height:100%; width:0; background: linear-gradient(90deg, var(--a), var(--b)); transition: width 1s linear; }
+  .vol { margin-top: 14px; display:flex; gap:10px; align-items:center; color:var(--muted); font-size:13px; }
+  .vol input { accent-color: var(--a); width: 160px; }
+  .live { display:none; margin-top: 20px; padding: 14px 18px; border-radius: 14px; background: rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.4); align-items:center; justify-content:space-between; gap:12px; flex-wrap: wrap; }
+  .live.on { display:flex; }
+  .live b { color:#fca5a5; letter-spacing: .1em; font-size: 12px; }
+  .live a { color:#fff; background: var(--red); padding: 8px 14px; border-radius: 10px; text-decoration:none; font-weight:700; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
+  .box { border:1px solid var(--line); border-radius: 18px; padding: 20px; background: rgba(17,20,34,.55); }
+  .box h2 { font-size: 13px; margin:0 0 12px; color: var(--muted); font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
+  ul { list-style:none; margin:0; padding:0; }
+  li { display:flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  li:last-child { border:0; }
+  .t { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 48px; }
+  li.now { color: #fff; } li.now .t { color: var(--b); font-weight:700; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .msg { color: var(--muted); font-size: 13px; margin-top: 8px; min-height: 1em; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 13px; text-align:center; }
+  @media (max-width: 720px) { .player { grid-template-columns: 1fr; text-align:center; justify-items:center; } .grid { grid-template-columns: 1fr; } .eq, .vol { justify-content:center; } .bar { margin-left:auto; margin-right:auto; width: 100%; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">Rádio <span>Tec</span></div>
+    <div class="badge" id="badge">NO AR 24H</div>
+  </header>
+
+  <section class="player" id="player">
+    <button class="play" id="play" aria-label="Ouvir a rádio">
+      <svg id="icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <div>
+      <div class="eq"><i></i><i></i><i></i><i></i></div>
+      <div class="np-label" id="label">TOCANDO AGORA</div>
+      <h1 id="title">Rádio Tec</h1>
+      <p class="artist" id="artist">Aperte o play para ouvir</p>
+      <div class="bar"><i id="prog"></i></div>
+      <div class="vol">Volume <input type="range" id="vol" min="0" max="1" step="0.01" value="0.9"></div>
+      <div class="msg" id="msg"></div>
+    </div>
+  </section>
+
+  <div class="live" id="live"><div><b>AO VIVO AGORA</b><div id="liveTitle"></div></div><a id="liveLink" target="_blank" rel="noopener">Assistir ao vivo</a></div>
+
+  <div class="grid">
+    <div class="box"><h2>A seguir</h2><ul id="next"><li class="sub">Carregando…</li></ul></div>
+    <div class="box"><h2>Programação de hoje</h2><ul id="today"><li class="sub">Carregando…</li></ul></div>
+  </div>
+  <footer id="foot">Rádio Tec · música, programas e podcasts 24 horas por dia</footer>
+</div>
+
+<audio id="audio" preload="auto"></audio>
+<script>
+// A programação vem pronta em playout.json. O player calcula pelo relógio o que está no ar,
+// então todo mundo ouve a mesma coisa ao mesmo tempo, como numa rádio de verdade.
+const $ = (id) => document.getElementById(id);
+const audio = $('audio');
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+let P = null, PROG = null, skew = 0, cur = -1, playing = false, fading = false, starting = false;
+
+const agora = () => Date.now() + skew;
+const pos = () => { const c = P.ciclo; return ((((agora() - P.ancora) / 1000) % c) + c) % c; };
+const clockOf = (s) => { // segundos do ciclo -> hora local de Brasília
+  const ms = agora() + (s - pos()) * 1000; return new Date(ms);
+};
+const hm = (d) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+
+function achar(p) { // índice do evento no ar no segundo p
+  const E = P.e; let lo = 0, hi = E.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (E[mid][0] <= p) lo = mid; else hi = mid - 1; }
+  return (E[lo][0] <= p && p < E[lo][0] + E[lo][1]) ? lo : (lo + 1) % E.length;
+}
+
+async function carregar() {
+  const r = await fetch(`playout.json?v=${Date.now()}`, { cache: 'no-store' });
+  const d = r.headers.get('date'); // acerta o relógio do aparelho pelo horário do servidor
+  if (d) { const s = Date.parse(d); if (!isNaN(s)) skew = s - Date.now() + 500; if (Math.abs(skew) < 2000) skew = 0; }
+  P = await r.json();
+  try { PROG = await (await fetch('programacao.json', { cache: 'no-store' })).json(); } catch {}
+  if (PROG?.slogan) $('foot').textContent = `${PROG.radio} · ${PROG.slogan}`;
+  if (!P.e.length) { $('msg').textContent = 'A programação ainda está vazia: envie áudios para o acervo.'; return; }
+  atualizarTela(); hojeNaGrade();
+}
+
+function tocar(idx) {
+  const e = P.e[idx], f = P.faixas[e[2]];
+  cur = idx; fading = false; starting = true;
+  audio.src = f.f;
+  audio.volume = +$('vol').value;
+  const iniciar = () => {
+    const off = Math.max(0, pos() - e[0]);
+    if (off > 0.5 && off < e[1]) audio.currentTime = off;
+    audio.play().catch(() => setPlaying(false)).finally(() => (starting = false));
+  };
+  audio.addEventListener('loadedmetadata', iniciar, { once: true });
+  atualizarTela();
+}
+
+function proximo() {
+  if (!playing) return;
+  const idx = achar(pos() + 0.05);
+  if (idx === cur && pos() < P.e[idx][0]) return; // intervalo vazio: espera a próxima faixa
+  tocar(idx);
+}
+
+// Relógio do player: troca de faixa no horário exato, faz fade em faixas cortadas e corrige atraso.
+setInterval(() => {
+  if (!P || !P.e.length) return;
+  if (!playing) { atualizarTela(); return; }
+  if (cur < 0 || starting) return;
+  const p = pos(), e = P.e[cur], fim = e[0] + e[1];
+  const dentro = p >= e[0] - 1 && p < fim;
+  if (!dentro) { proximo(); return; }
+  const f = P.faixas[e[2]];
+  if (e[1] < f.d - 1 && fim - p < 2.5 && !fading) { // faixa cortada para o programa entrar na hora
+    fading = true; const v0 = audio.volume; const t0 = performance.now();
+    const step = () => { const k = Math.max(0, 1 - (performance.now() - t0) / 2400); audio.volume = v0 * k; if (k > 0 && fading) requestAnimationFrame(step); };
+    step();
+  }
+  const esperado = p - e[0];
+  if (!audio.paused && audio.readyState > 2 && Math.abs(audio.currentTime - esperado) > 3) audio.currentTime = esperado;
+  atualizarTela();
+}, 250);
+audio.addEventListener('ended', () => setTimeout(proximo, 50));
+audio.addEventListener('waiting', () => playing && ($('msg').textContent = 'Carregando o áudio…'));
+audio.addEventListener('playing', () => ($('msg').textContent = ''));
+audio.addEventListener('error', () => { if (playing) { $('msg').textContent = 'Reconectando…'; setTimeout(proximo, 2000); } });
+
+$('play').onclick = () => {
+  if (!P || !P.e.length) return;
+  if (playing) { setPlaying(false); audio.pause(); audio.removeAttribute('src'); audio.load(); cur = -1; return; }
+  setPlaying(true); tocar(achar(pos()));
+};
+$('vol').oninput = (e) => { if (!fading) audio.volume = +e.target.value; };
+function setPlaying(p) {
+  playing = p; $('player').classList.toggle('playing', p);
+  $('icon').innerHTML = p ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+}
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.setActionHandler('play', () => !playing && $('play').click());
+  navigator.mediaSession.setActionHandler('pause', () => playing && $('play').click());
+}
+
+// ---------- Tela ----------
+let ultimoIdx = -2;
+function atualizarTela() {
+  const p = pos(), idx = playing && cur >= 0 ? cur : achar(p), e = P.e[idx], f = P.faixas[e[2]];
+  const slot = e[3] >= 0 ? P.slots[e[3]] : null;
+  $('prog').style.width = `${Math.min(100, Math.max(0, (p - e[0]) / e[1] * 100))}%`;
+  if (idx === ultimoIdx) return;
+  ultimoIdx = idx;
+  const mostra = ['musica', 'programa', 'podcast'].includes(f.c);
+  $('label').textContent = slot ? slot.t.toUpperCase() : 'TOCANDO AGORA';
+  $('title').textContent = mostra ? f.t : (slot?.t || P.radio);
+  $('artist').textContent = mostra ? (f.a || slot?.t || P.radio) : 'Rádio Tec';
+  if ('mediaSession' in navigator && mostra) navigator.mediaSession.metadata = new MediaMetadata({ title: f.t, artist: f.a || P.radio, album: P.radio });
+
+  const live = slot && slot.k === 'aovivo';
+  $('live').classList.toggle('on', !!(live && slot.l));
+  if (live) { $('liveTitle').textContent = slot.t; if (slot.l) $('liveLink').href = slot.l; }
+  $('badge').textContent = live ? 'AO VIVO' : 'NO AR 24H';
+
+  const prox = [];
+  for (let j = 1, k = idx; prox.length < 6 && j < 60; j++) {
+    k = (k + 1) % P.e.length; const ev = P.e[k], fx = P.faixas[ev[2]];
+    if (['musica', 'programa', 'podcast'].includes(fx.c)) prox.push(`<li><span class="t">${hm(clockOf(ev[0]))}</span><div>${esc(fx.t)}<div class="sub">${esc(fx.a || (ev[3] >= 0 ? P.slots[ev[3]].t : ''))}</div></div></li>`);
+  }
+  $('next').innerHTML = prox.join('') || '<li class="sub">Programação musical.</li>';
+}
+
+function hojeNaGrade() {
+  if (!PROG) return;
+  const n = new Date(agora() - 3 * 3600 * 1000); // Brasília
+  const dia = DIAS[n.getUTCDay()], m = n.getUTCHours() * 60 + n.getUTCMinutes();
+  const toMin = (t) => { const [h, mm] = t.split(':').map(Number); return h * 60 + mm; };
+  const lista = PROG.grade.filter((g) => g.dias.includes(dia)).sort((a, b) => toMin(a.inicio) - toMin(b.inicio));
+  $('today').innerHTML = lista.map((g) => { const on = toMin(g.inicio) <= m && m < toMin(g.fim);
+    return `<li class="${on ? 'now' : ''}"><span class="t">${g.inicio}</span><div>${esc(g.titulo)}${g.tipo === 'aovivo' ? ' <span class="sub">· ao vivo</span>' : ''}</div></li>`; }).join('') || '<li class="sub">Programação musical o dia todo.</li>';
+}
+setInterval(() => P && hojeNaGrade(), 60000);
+// Recarrega a programação a cada 30 min para pegar atualizações publicadas.
+setInterval(() => { fetch(`playout.json?v=${Date.now()}`, { cache: 'no-store' }).then((r) => r.json()).then((d) => { if (d.gerado !== P.gerado) { P = d; ultimoIdx = -2; if (playing) proximo(); } }).catch(() => {}); }, 30 * 60000);
+
+carregar().catch(() => ($('msg').textContent = 'Não foi possível carregar a programação.'));
+</script>
+</body>
+</html>

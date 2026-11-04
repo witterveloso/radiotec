@@ -1,0 +1,1 @@
+Nomeie cada arquivo com a hora: 00h.mp3, 01h.mp3 ... 23h.mp3. Um arquivo sem número serve para qualquer hora.

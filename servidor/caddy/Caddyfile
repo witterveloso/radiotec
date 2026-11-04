@@ -1,0 +1,13 @@
+# HTTPS automático (Let's Encrypt) para o painel, o player e o stream.
+{$DOMAIN} {
+	encode gzip
+	@stream path /radio.mp3 /radio.aac /status-json.xsl
+	handle @stream {
+		reverse_proxy icecast:8000 {
+			flush_interval -1
+		}
+	}
+	handle {
+		reverse_proxy app:3000
+	}
+}

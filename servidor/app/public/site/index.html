@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rádio Tec · Ao vivo 24 horas</title>
+<meta name="description" content="Rádio Tec: música, programas e podcasts 24 horas por dia.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#07080f; --card:#11142200; --line:#232842; --text:#eef0f8; --muted:#8c92ad; --a:#6d5dfc; --b:#22d3ee; --red:#ef4444; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #241c6b 0%, transparent 60%), radial-gradient(900px 500px at 110% 10%, #0b4a5c 0%, transparent 55%), var(--bg); color:var(--text); font:15px/1.5 Inter, system-ui, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 40px; }
+  .logo { font-weight:800; font-size:22px; letter-spacing:-.03em; }
+  .logo span { background: linear-gradient(90deg, var(--a), var(--b)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .badge { font-size:12px; font-weight:700; letter-spacing:.12em; padding:6px 12px; border-radius:99px; border:1px solid var(--line); color:var(--muted); }
+  .badge.live { color:#fff; background: var(--red); border-color: var(--red); }
+  .player { display:grid; grid-template-columns: 160px 1fr; gap: 28px; align-items:center; padding: 28px; border:1px solid var(--line); border-radius: 24px; background: rgba(17,20,34,.7); backdrop-filter: blur(10px); }
+  .play { width:160px; height:160px; border-radius:50%; border:0; cursor:pointer; background: conic-gradient(from 200deg, var(--a), var(--b), var(--a)); display:grid; place-items:center; box-shadow: 0 20px 60px rgba(109,93,252,.35); transition: transform .15s; }
+  .play:hover { transform: scale(1.03); }
+  .play svg { width:56px; height:56px; fill:#fff; }
+  .eq { display:flex; gap:4px; align-items:flex-end; height:18px; margin-bottom:10px; }
+  .eq i { width:4px; background: var(--b); border-radius:2px; height:4px; }
+  .playing .eq i { animation: eq .9s infinite ease-in-out; } .eq i:nth-child(2){animation-delay:.2s} .eq i:nth-child(3){animation-delay:.4s} .eq i:nth-child(4){animation-delay:.1s}
+  @keyframes eq { 50% { height:18px; } }
+  .np-label { font-size:12px; letter-spacing:.14em; font-weight:700; color: var(--b); }
+  h1 { font-size: clamp(24px, 4vw, 38px); margin: 6px 0 4px; letter-spacing:-.03em; line-height:1.15; }
+  .artist { color: var(--muted); font-size: 18px; margin:0; }
+  .vol { margin-top: 18px; display:flex; gap:10px; align-items:center; color:var(--muted); font-size:13px; }
+  .vol input { accent-color: var(--a); width: 160px; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
+  .box { border:1px solid var(--line); border-radius: 18px; padding: 20px; background: rgba(17,20,34,.55); }
+  .box h2 { font-size: 14px; margin:0 0 12px; color: var(--muted); font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
+  ul { list-style:none; margin:0; padding:0; }
+  li { display:flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  li:last-child { border:0; }
+  .t { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 48px; }
+  li.now { color: #fff; } li.now .t { color: var(--b); font-weight:700; }
+  .sub { color: var(--muted); font-size: 13px; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 13px; text-align:center; }
+  @media (max-width: 720px) { .player { grid-template-columns: 1fr; text-align:center; justify-items:center; } .grid { grid-template-columns: 1fr; } .eq { justify-content:center; } .vol { justify-content:center; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">Rádio <span>Tec</span></div>
+    <div class="badge" id="badge">NO AR 24H</div>
+  </header>
+
+  <section class="player" id="player">
+    <button class="play" id="play" aria-label="Ouvir a rádio">
+      <svg id="icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <div>
+      <div class="eq"><i></i><i></i><i></i><i></i></div>
+      <div class="np-label" id="label">TOCANDO AGORA</div>
+      <h1 id="title">Rádio Tec</h1>
+      <p class="artist" id="artist">Aperte o play para ouvir</p>
+      <div class="vol">Volume <input type="range" id="vol" min="0" max="1" step="0.01" value="0.9"></div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="box"><h2>Tocou agora há pouco</h2><ul id="hist"><li class="sub">Carregando…</li></ul></div>
+    <div class="box"><h2>Programação de hoje</h2><ul id="today"><li class="sub">Carregando…</li></ul></div>
+  </div>
+  <footer>Rádio Tec · música, programas e podcasts 24 horas por dia</footer>
+</div>
+
+<audio id="audio" preload="none"></audio>
+<script>
+  // Para hospedar esta página no GitHub Pages, troque BASE pelo endereço do servidor da rádio,
+  // ex.: const BASE = 'https://radio.seudominio.com.br';
+  const BASE = new URLSearchParams(location.search).get('base') || '';
+  const audio = document.getElementById('audio');
+  const canAac = audio.canPlayType('audio/aac') || audio.canPlayType('audio/mp4');
+  const STREAM = `${BASE}/${canAac ? 'radio.aac' : 'radio.mp3'}`;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let playing = false;
+
+  $('play').onclick = () => {
+    if (playing) { audio.pause(); audio.removeAttribute('src'); audio.load(); setPlaying(false); return; }
+    audio.src = `${STREAM}?t=${Date.now()}`; // sempre pega o sinal ao vivo, sem atraso de cache
+    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  };
+  audio.onerror = () => { if (playing) { setTimeout(() => { audio.src = `${STREAM}?t=${Date.now()}`; audio.play(); }, 3000); } };
+  $('vol').oninput = (e) => audio.volume = e.target.value;
+  audio.volume = 0.9;
+  function setPlaying(p) {
+    playing = p; $('player').classList.toggle('playing', p);
+    $('icon').innerHTML = p ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+  }
+
+  const hm = (s) => new Date(s * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  async function refresh() {
+    try {
+      const r = await fetch(`${BASE}/api/nowplaying`); const d = await r.json();
+      $('badge').textContent = d.live ? 'AO VIVO' : 'NO AR 24H'; $('badge').classList.toggle('live', d.live);
+      $('label').textContent = d.live ? 'AO VIVO AGORA' : 'TOCANDO AGORA';
+      const showable = d.now && ['musica', 'aovivo', 'programa', 'podcast'].includes(d.now.category);
+      if (!showable) { $('title').textContent = 'Rádio Tec'; $('artist').textContent = d.now?.slot_title || 'Música, programas e podcasts'; }
+      if (showable) {
+        $('title').textContent = d.now.title; $('artist').textContent = d.now.artist || d.now.slot_title || 'Rádio Tec';
+        if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: d.now.title, artist: d.now.artist || 'Rádio Tec', album: 'Rádio Tec' });
+      }
+      $('hist').innerHTML = (d.history || []).filter((h) => h.category === 'musica' || h.category === 'aovivo')
+        .map((h) => `<li><span class="t">${hm(h.started_at)}</span><div>${esc(h.title)}<div class="sub">${esc(h.artist)}</div></div></li>`).join('') || '<li class="sub">Ainda nada por aqui.</li>';
+    } catch { /* servidor fora do ar: tenta de novo */ }
+  }
+  async function loadToday() {
+    try {
+      const all = await (await fetch(`${BASE}/api/schedule`)).json();
+      const n = new Date(), day = n.getDay(), m = n.getHours() * 60 + n.getMinutes();
+      const toMin = (t) => { const [h, mm] = t.split(':').map(Number); return h * 60 + mm; };
+      const list = all.filter((s) => s.day === day);
+      $('today').innerHTML = list.map((s) => { const on = toMin(s.start) <= m && m < toMin(s.end);
+        return `<li class="${on ? 'now' : ''}"><span class="t">${s.start}</span><div>${esc(s.title)}${s.kind === 'aovivo' ? ' <span class="sub">· ao vivo</span>' : ''}</div></li>`; }).join('') || '<li class="sub">Programação musical o dia todo.</li>';
+    } catch { $('today').innerHTML = '<li class="sub">Programação musical o dia todo.</li>'; }
+  }
+  refresh(); loadToday(); setInterval(refresh, 15000); setInterval(loadToday, 300000);
+</script>
+</body>
+</html>

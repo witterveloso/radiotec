@@ -1,0 +1,55 @@
+name: Publicar a Rádio Tec
+
+# Roda sempre que algo muda no acervo ou na programação (e pode ser rodado à mão).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Reaproveitar áudios já tratados
+        uses: actions/cache@v4
+        with:
+          path: .cache-audio
+          key: audio-${{ hashFiles('acervo/**') }}
+          restore-keys: audio-
+
+      - name: Gerar a programação e tratar os áudios
+        run: |
+          cd gerador && npm ci --silent && cd ..
+          node gerador/gerar.mjs
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  publicar:
+    needs: gerar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

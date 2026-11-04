@@ -1,0 +1,5 @@
+_site/
+.cache-audio/
+node_modules/
+.env
+servidor/data/radio.db*

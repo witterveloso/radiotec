@@ -1,0 +1,27 @@
+{
+  "radio": "Rádio Tec",
+  "slogan": "Música, programas e podcasts 24 horas por dia",
+  "repositorio": "witterveloso/radiotec",
+  "regras": {
+    "musicaNaoRepeteMin": 180,
+    "artistaNaoRepeteMin": 60,
+    "volumeLUFS": -16,
+    "bitrate": "128k"
+  },
+  "relogioPadrao": "padrao",
+  "relogios": {
+    "padrao": {
+      "nome": "Padrão",
+      "itens": ["horacerta", "vinheta", "musica", "musica", "vinheta", "musica", "musica", "comercial", "musica", "musica", "vinheta", "musica", "musica", "musica"]
+    },
+    "madrugada": {
+      "nome": "Madrugada",
+      "itens": ["horacerta", "vinheta", "musica", "musica", "musica", "musica", "vinheta", "musica", "musica", "musica", "musica"]
+    }
+  },
+  "grade": [
+    { "dias": ["dom", "seg", "ter", "qua", "qui", "sex", "sab"], "inicio": "00:00", "fim": "06:00", "tipo": "relogio", "titulo": "Madrugada Tec", "relogio": "madrugada" },
+    { "dias": ["seg", "ter", "qua", "qui", "sex"], "inicio": "07:00", "fim": "08:00", "tipo": "programa", "titulo": "Bom Dia Tec", "programa": "bom-dia-tec" },
+    { "dias": ["seg", "ter", "qua", "qui", "sex"], "inicio": "12:00", "fim": "13:00", "tipo": "aovivo", "titulo": "Meio-Dia ao Vivo", "link": "" }
+  ]
+}
