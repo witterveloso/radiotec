@@ -63,13 +63,13 @@
   <section id="acervo" class="tab">
     <div class="card">
       <div class="cardhead"><h2>Enviar áudios</h2></div>
-      <p class="hint">Os áudios ficam no GitHub, na pasta <code>acervo</code>. Cada botão abre a pasta certa: arraste os arquivos e clique em <b>Commit changes</b>. Em poucos minutos a rádio é atualizada sozinha.</p>
+      <p class="hint">Os áudios ficam no Cloudflare R2. Cada botão abre a pasta certa: clique em <b>Carregar</b> (ou arraste os arquivos para a página). A rádio confere novos áudios a cada hora; para atualizar na hora, use <a href="#" id="runNow" target="_blank" rel="noopener">Atualizar a rádio agora</a> e clique em <b>Run workflow</b>.</p>
       <div class="folders" id="folders"></div>
       <div class="row" style="margin-top:14px">
-        <label>Novo programa <input id="progSlug" placeholder="ex.: bom-dia-tec"></label>
-        <a class="btn ghost" id="progUp" target="_blank" rel="noopener">Enviar arquivos do programa</a>
+        <label>Programa <input id="progSlug" placeholder="ex.: bom-dia-tec"></label>
+        <a class="btn ghost" id="progUp" target="_blank" rel="noopener">Abrir a pasta do programa</a>
       </div>
-      <p class="hint">Programas: os arquivos tocam em ordem alfabética, então numere os blocos (<code>01-bloco.mp3</code>, <code>02-bloco.mp3</code>). Hora certa: nomeie com a hora (<code>14h.mp3</code>).</p>
+      <p class="hint">Programas: cada programa é uma pasta dentro de <code>programas</code>. Programa novo: abra a pasta <code>programas</code> e use <b>Adicionar pasta</b>. Os arquivos tocam em ordem alfabética, então numere os blocos (<code>01-bloco.mp3</code>, <code>02-bloco.mp3</code>). Hora certa: nomeie com a hora (<code>14h.mp3</code>).</p>
     </div>
     <div class="card">
       <div class="cardhead"><h2>No ar agora <span class="muted" id="acCount"></span></h2>

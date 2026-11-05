@@ -132,6 +132,7 @@ function tocar(idx) {
 
 function proximo() {
   if (!playing) return;
+  if (PENDENTE) { P = PENDENTE; PENDENTE = null; ultimoIdx = -2; tocar(achar(pos())); return; }
   const idx = achar(pos() + 0.05);
   if (idx === cur && pos() < P.e[idx][0]) return; // intervalo vazio: espera a próxima faixa
   tocar(idx);
@@ -213,7 +214,9 @@ function hojeNaGrade() {
 }
 setInterval(() => P && hojeNaGrade(), 60000);
 // Recarrega a programação a cada 30 min para pegar atualizações publicadas.
-setInterval(() => { fetch(`playout.json?v=${Date.now()}`, { cache: 'no-store' }).then((r) => r.json()).then((d) => { if (d.gerado !== P.gerado) { P = d; ultimoIdx = -2; if (playing) proximo(); } }).catch(() => {}); }, 30 * 60000);
+// A troca acontece só no fim da faixa atual, sem cortar o que está tocando.
+let PENDENTE = null;
+setInterval(() => { fetch(`playout.json?v=${Date.now()}`, { cache: 'no-store' }).then((r) => r.json()).then((d) => { if ((d.versao || d.gerado) !== (P.versao || P.gerado)) { if (playing) PENDENTE = d; else { P = d; ultimoIdx = -2; } } }).catch(() => {}); }, 15 * 60000);
 
 carregar().catch(() => ($('msg').textContent = 'Não foi possível carregar a programação.'));
 </script>

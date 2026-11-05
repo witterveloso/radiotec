@@ -2,6 +2,10 @@
   "radio": "Rádio Tec",
   "slogan": "Música, programas e podcasts 24 horas por dia",
   "repositorio": "witterveloso/radiotec",
+  "armazenamento": {
+    "painel": "https://dash.cloudflare.com/555b4a54dec3d097c90bc3826983a20a/r2/default/buckets/radiotec",
+    "publico": "https://pub-6925f1a508c1473a8829a436258d4233.r2.dev"
+  },
   "regras": {
     "musicaNaoRepeteMin": 180,
     "artistaNaoRepeteMin": 60,
@@ -12,16 +16,84 @@
   "relogios": {
     "padrao": {
       "nome": "Padrão",
-      "itens": ["horacerta", "vinheta", "musica", "musica", "vinheta", "musica", "musica", "comercial", "musica", "musica", "vinheta", "musica", "musica", "musica"]
+      "itens": [
+        "horacerta",
+        "vinheta",
+        "musica",
+        "musica",
+        "vinheta",
+        "musica",
+        "musica",
+        "comercial",
+        "musica",
+        "musica",
+        "vinheta",
+        "musica",
+        "musica",
+        "musica"
+      ]
     },
     "madrugada": {
       "nome": "Madrugada",
-      "itens": ["horacerta", "vinheta", "musica", "musica", "musica", "musica", "vinheta", "musica", "musica", "musica", "musica"]
+      "itens": [
+        "horacerta",
+        "vinheta",
+        "musica",
+        "musica",
+        "musica",
+        "musica",
+        "vinheta",
+        "musica",
+        "musica",
+        "musica",
+        "musica"
+      ]
     }
   },
   "grade": [
-    { "dias": ["dom", "seg", "ter", "qua", "qui", "sex", "sab"], "inicio": "00:00", "fim": "06:00", "tipo": "relogio", "titulo": "Madrugada Tec", "relogio": "madrugada" },
-    { "dias": ["seg", "ter", "qua", "qui", "sex"], "inicio": "07:00", "fim": "08:00", "tipo": "programa", "titulo": "Bom Dia Tec", "programa": "bom-dia-tec" },
-    { "dias": ["seg", "ter", "qua", "qui", "sex"], "inicio": "12:00", "fim": "13:00", "tipo": "aovivo", "titulo": "Meio-Dia ao Vivo", "link": "" }
+    {
+      "dias": [
+        "dom",
+        "seg",
+        "ter",
+        "qua",
+        "qui",
+        "sex",
+        "sab"
+      ],
+      "inicio": "00:00",
+      "fim": "06:00",
+      "tipo": "relogio",
+      "titulo": "Madrugada Tec",
+      "relogio": "madrugada"
+    },
+    {
+      "dias": [
+        "seg",
+        "ter",
+        "qua",
+        "qui",
+        "sex"
+      ],
+      "inicio": "07:00",
+      "fim": "08:00",
+      "tipo": "programa",
+      "titulo": "Bom Dia Tec",
+      "programa": "bom-dia-tec"
+    },
+    {
+      "dias": [
+        "seg",
+        "ter",
+        "qua",
+        "qui",
+        "sex"
+      ],
+      "inicio": "12:00",
+      "fim": "13:00",
+      "tipo": "aovivo",
+      "titulo": "Meio-Dia ao Vivo",
+      "link": ""
+    }
   ]
 }

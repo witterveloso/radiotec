@@ -10,6 +10,7 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { parseFile } from 'music-metadata';
+import { lerAcervoR2, r2Configurado } from './r2.mjs';
 
 const ROOT = process.cwd();
 const OUT = path.join(ROOT, '_site');
@@ -79,6 +80,12 @@ function ffmpeg(args) {
     p.on('close', (c) => (c === 0 ? ok() : falha(new Error(err))));
   });
 }
+function tratar(origem, destino) {
+  return ffmpeg(['-i', origem, '-vn', '-map_metadata', '-1',
+    '-af', `loudnorm=I=${regras.volumeLUFS}:TP=-1.5:LRA=11`,
+    '-ar', '44100', '-ac', '2', '-codec:a', 'libmp3lame', '-b:a', regras.bitrate, destino]);
+}
+
 async function processar(faixas) {
   fs.mkdirSync(path.join(OUT, 'audio'), { recursive: true });
   fs.mkdirSync(CACHE, { recursive: true });
@@ -93,9 +100,7 @@ async function processar(faixas) {
       if (SEM_AUDIO) { fs.copyFileSync(path.join(ROOT, f.origem), destino); continue; }
       const cache = path.join(CACHE, `${f.hash}_${chave}.mp3`);
       if (!fs.existsSync(cache)) {
-        await ffmpeg(['-i', path.join(ROOT, f.origem), '-vn', '-map_metadata', '-1',
-          '-af', `loudnorm=I=${regras.volumeLUFS}:TP=-1.5:LRA=11`,
-          '-ar', '44100', '-ac', '2', '-codec:a', 'libmp3lame', '-b:a', regras.bitrate, cache]);
+        await tratar(path.join(ROOT, f.origem), cache);
         feitos++;
       }
       fs.copyFileSync(cache, destino);
@@ -217,9 +222,11 @@ async function main() {
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
   const faixas = await lerAcervo();
+  await processar(faixas);
+  if (r2Configurado()) faixas.push(...await lerAcervoR2({ tratar, regras, log }));
+  else log('R2 não configurado: usando só o acervo do repositório');
   const cont = faixas.reduce((a, f) => ((a[f.cat] = (a[f.cat] || 0) + 1), a), {});
   log('acervo:', JSON.stringify(cont));
-  await processar(faixas);
 
   const eventos = montarProgramacao(prog, faixas, regras);
   const horas = eventos.reduce((a, e) => a + e[1], 0) / 3600;
@@ -228,12 +235,14 @@ async function main() {
   const playout = {
     radio: prog.radio,
     gerado: new Date().toISOString(),
+    versao: '',
     ancora: ANCORA,
     ciclo: CICLO_S,
     faixas: faixas.map((f) => ({ f: f.arquivo, t: f.titulo, a: f.artista, c: f.cat, d: Math.round(f.dur * 10) / 10, cp: f.compositor || undefined, i: f.isrc || undefined })),
     slots: prog.grade.map((g) => ({ t: g.titulo, k: g.tipo, l: g.link || undefined })),
     e: eventos,
   };
+  playout.versao = crypto.createHash('sha1').update(JSON.stringify([playout.faixas, playout.slots, playout.e])).digest('hex').slice(0, 12);
   copiarPasta(path.join(ROOT, 'site'), OUT);
   fs.writeFileSync(path.join(OUT, 'playout.json'), JSON.stringify(playout));
   fs.writeFileSync(path.join(OUT, 'programacao.json'), JSON.stringify(prog, null, 2));

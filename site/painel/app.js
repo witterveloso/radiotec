@@ -4,7 +4,7 @@ const $ = (s) => document.querySelector(s);
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
 const DIAS_N = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const CATS = { musica: 'Música', vinheta: 'Vinheta', horacerta: 'Hora certa', comercial: 'Comercial', podcast: 'Podcast', programa: 'Programa' };
-const PASTAS = { musica: 'musicas', vinheta: 'vinhetas', horacerta: 'horacerta', comercial: 'comerciais', podcast: 'podcasts' };
+const PASTAS = { musica: 'musicas', vinheta: 'vinhetas', horacerta: 'horacerta', comercial: 'comerciais', podcast: 'podcasts', programa: 'programas' };
 const KIND = { relogio: 'Relógio', programa: 'Programa', aovivo: 'Ao vivo' };
 const RASCUNHO = 'radiotec-rascunho';
 
@@ -147,19 +147,20 @@ $('#ckDel').onclick = () => {
 
 // ---------- Acervo ----------
 function renderAcervo() {
-  const url = (p) => `https://github.com/${repo()}/upload/main/acervo/${p}`;
+  const nuvem = PROG.armazenamento?.painel;
+  const url = (p) => nuvem ? `${nuvem}?prefix=${encodeURIComponent(p.replace(/\/?$/, '/'))}` : `https://github.com/${repo()}/upload/main/acervo/${p}`;
   $('#folders').innerHTML = Object.entries(PASTAS).map(([c, p]) => `<div class="folder"><h3>${CATS[c]}</h3>
-    <div class="muted">${ACERVO.filter((a) => a.cat === c).length} no ar · acervo/${p}</div><a href="${url(p)}" target="_blank" rel="noopener">Enviar ${CATS[c].toLowerCase()}</a></div>`).join('');
+    <div class="muted">${ACERVO.filter((a) => a.cat === c).length} no ar · pasta ${p}</div><a href="${url(p)}" target="_blank" rel="noopener">Enviar ${CATS[c].toLowerCase()}</a></div>`).join('');
   const slug = () => $('#progSlug').value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const upd = () => { $('#progUp').href = slug() ? url(`programas/${slug()}`) : '#'; };
+  const upd = () => { $('#progUp').href = slug() ? url(`programas/${slug()}`) : url('programas'); };
+  $('#runNow').href = `https://github.com/${repo()}/actions/workflows/publicar.yml`;
   $('#progSlug').oninput = upd; upd();
-  $('#progUp').onclick = (e) => { if (!slug()) { e.preventDefault(); toast('Dê um nome ao programa primeiro.'); } };
   const q = $('#acSearch').value.toLowerCase(), c = $('#acCat').value;
   const rows = ACERVO.filter((a) => (!c || a.cat === c) && (!q || `${a.titulo} ${a.artista} ${a.origem}`.toLowerCase().includes(q)));
   $('#acCount').textContent = `${rows.length} de ${ACERVO.length}`;
   $('#acBody').innerHTML = rows.map((a) => `<tr><td>${esc(a.titulo)}</td><td>${esc(a.artista)}</td><td><span class="cat ${a.cat === 'comercial' ? 'spot' : a.cat}">${CATS[a.cat]}</span></td>
     <td>${esc(a.programa || a.genero)}</td><td class="mono">${dur(a.dur)}</td>
-    <td><a class="muted" href="https://github.com/${repo()}/blob/main/${encodeURI(a.origem)}" target="_blank" rel="noopener">${esc(a.origem.split('/').pop())}</a></td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nenhum áudio publicado ainda.</td></tr>';
+    <td class="muted">${esc(a.origem.split('/').pop())}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nenhum áudio publicado ainda.</td></tr>';
 }
 $('#acSearch').oninput = renderAcervo; $('#acCat').onchange = renderAcervo;
 

@@ -1,9 +1,12 @@
 name: Publicar a Rádio Tec
 
 # Roda sempre que algo muda no acervo ou na programação (e pode ser rodado à mão).
+# Também confere de hora em hora se chegaram áudios novos no Cloudflare R2.
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -13,7 +16,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   gerar:
@@ -36,6 +39,12 @@ jobs:
           restore-keys: audio-
 
       - name: Gerar a programação e tratar os áudios
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: radiotec
+          R2_PUBLIC_URL: https://pub-6925f1a508c1473a8829a436258d4233.r2.dev
         run: |
           cd gerador && npm ci --silent && cd ..
           node gerador/gerar.mjs
