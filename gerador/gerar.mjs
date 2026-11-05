@@ -225,6 +225,17 @@ async function main() {
   await processar(faixas);
   if (r2Configurado()) faixas.push(...await lerAcervoR2({ tratar, regras, log }));
   else log('R2 não configurado: usando só o acervo do repositório');
+  // Faixas fora do ar: o arquivo continua guardado, mas não entra na programação.
+  const norm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const fora = (prog.foraDoAr || []).map(norm).filter(Boolean);
+  if (fora.length) {
+    for (let i = faixas.length - 1; i >= 0; i--) {
+      const f = faixas[i];
+      if (fora.some((n) => n === norm(f.titulo) || n === norm(f.nomeArq) || n === norm(path.basename(f.origem)))) {
+        log(`fora do ar: ${f.origem}`); faixas.splice(i, 1);
+      }
+    }
+  }
   const cont = faixas.reduce((a, f) => ((a[f.cat] = (a[f.cat] || 0) + 1), a), {});
   log('acervo:', JSON.stringify(cont));
 
