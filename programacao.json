@@ -16,7 +16,8 @@
     "musicaNaoRepeteMin": 180,
     "artistaNaoRepeteMin": 60,
     "volumeLUFS": -16,
-    "bitrate": "128k"
+    "bitrate": "128k",
+    "crossfade": 2
   },
   "foraDoAr": [
     "Turntable Battle Blues",

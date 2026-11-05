@@ -50,7 +50,7 @@ async function baixar(s3, bucket, key, destino) {
  * Retorna as faixas do R2 no mesmo formato do acervo local, com `url` pública do áudio tratado.
  * tratar(origem, destino) é a função de ffmpeg do gerador.
  */
-export async function lerAcervoR2({ tratar, regras, log }) {
+export async function lerAcervoR2({ tratar, regras, log, versao = '' }) {
   const bucket = process.env.R2_BUCKET || 'radiotec';
   const publico = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '');
   if (!publico) throw new Error('Falta R2_PUBLIC_URL (endereço público do bucket, ex.: https://pub-xxxx.r2.dev)');
@@ -64,7 +64,7 @@ export async function lerAcervoR2({ tratar, regras, log }) {
     try { indice = JSON.parse(fs.readFileSync(tmp, 'utf8')); } catch { indice = {}; }
   }
 
-  const chaveTrat = `${regras.volumeLUFS}_${regras.bitrate}`;
+  const chaveTrat = `${regras.volumeLUFS}_${regras.bitrate}_${versao}`;
   const originais = objetos.filter((o) => !o.key.startsWith('_') && AUDIO.test(o.key) && PASTAS[o.key.split('/')[0]]);
   const trabalho = path.join(os.tmpdir(), 'radiotec-r2');
   fs.mkdirSync(trabalho, { recursive: true });
@@ -86,7 +86,7 @@ export async function lerAcervoR2({ tratar, regras, log }) {
           await baixar(s3, bucket, o.key, orig);
           let meta = {};
           try { meta = await parseFile(orig, { duration: true }); } catch { /* sem tags */ }
-          await tratar(orig, trat);
+          await tratar(orig, trat, cat);
           const dur = (await parseFile(trat, { duration: true })).format.duration || meta.format?.duration || 0;
           await s3.send(new PutObjectCommand({ Bucket: bucket, Key: `_tratado/${id}.mp3`, Body: fs.readFileSync(trat), ContentType: 'audio/mpeg', CacheControl: 'public, max-age=31536000, immutable' }));
           const c = meta.common || {};

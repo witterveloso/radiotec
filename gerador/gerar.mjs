@@ -80,16 +80,22 @@ function ffmpeg(args) {
     p.on('close', (c) => (c === 0 ? ok() : falha(new Error(err))));
   });
 }
-function tratar(origem, destino) {
+// Tratamento profissional: corta silêncio do início e do fim (músicas, vinhetas, spots),
+// padroniza o volume (loudness) e gera MP3 leve.
+export const VERSAO_TRATAMENTO = 'v2';
+const CURTAS = new Set(['musica', 'vinheta', 'horacerta', 'comercial']);
+function tratar(origem, destino, cat = 'musica') {
+  const corte = 'silenceremove=start_periods=1:start_duration=0.05:start_threshold=-48dB';
+  const filtros = CURTAS.has(cat) ? `${corte},areverse,${corte},areverse,` : '';
   return ffmpeg(['-i', origem, '-vn', '-map_metadata', '-1',
-    '-af', `loudnorm=I=${regras.volumeLUFS}:TP=-1.5:LRA=11`,
+    '-af', `${filtros}loudnorm=I=${regras.volumeLUFS}:TP=-1.5:LRA=11`,
     '-ar', '44100', '-ac', '2', '-codec:a', 'libmp3lame', '-b:a', regras.bitrate, destino]);
 }
 
 async function processar(faixas) {
   fs.mkdirSync(path.join(OUT, 'audio'), { recursive: true });
   fs.mkdirSync(CACHE, { recursive: true });
-  const chave = `${regras.volumeLUFS}_${regras.bitrate}`;
+  const chave = `${regras.volumeLUFS}_${regras.bitrate}_${VERSAO_TRATAMENTO}`;
   const fila = [...faixas];
   let feitos = 0;
   const worker = async () => {
@@ -100,7 +106,7 @@ async function processar(faixas) {
       if (SEM_AUDIO) { fs.copyFileSync(path.join(ROOT, f.origem), destino); continue; }
       const cache = path.join(CACHE, `${f.hash}_${chave}.mp3`);
       if (!fs.existsSync(cache)) {
-        await tratar(path.join(ROOT, f.origem), cache);
+        await tratar(path.join(ROOT, f.origem), cache, f.cat);
         feitos++;
       }
       fs.copyFileSync(cache, destino);
@@ -169,7 +175,18 @@ export function montarProgramacao(prog, faixas, regras) {
   }
 
   const relogioDe = (nome) => prog.relogios[nome] || prog.relogios[prog.relogioPadrao] || { itens: ['musica'] };
+  // Crossfade: quanto a faixa nova "entra por cima" do fim da anterior, em segundos.
+  const xf = regras.crossfade ?? 2;
+  function sobreposicao(ant, atual, antCortada) {
+    if (!ant || antCortada || atual.cat === 'programa' || ant.cat === 'programa') return 0; // programa entra limpo, na hora exata
+    let s;
+    if (ant.cat === 'musica' && atual.cat === 'musica') s = xf;
+    else if (atual.cat === 'podcast' || ant.cat === 'podcast') s = Math.min(1, xf);
+    else s = Math.min(0.6, xf); // vinheta, hora certa e comercial colados na música
+    return Math.min(s, ant.dur * 0.25, atual.dur * 0.25);
+  }
   const eventos = [];
+  let anterior = null, antCortada = false;
   let t = 0, posRel = 0, horaRel = -1, chaveSlot = null, posProg = 0, vazios = 0;
 
   while (t < CICLO_S) {
@@ -200,8 +217,13 @@ export function montarProgramacao(prog, faixas, regras) {
       if (++vazios > 5000) break;
       t += 60; continue;
     }
-    const dur = Math.min(f.dur, resta);
-    eventos.push([Math.round(t * 10) / 10, Math.round(dur * 10) / 10, f.idx, slot ? slot.g.k : -1]);
+    const sob = sobreposicao(anterior, f, antCortada);
+    const ini = Math.max(eventos.length ? eventos[eventos.length - 1][0] + 1 : 0, t - sob);
+    const dur = Math.min(f.dur, limite - ini);
+    const entra = Math.round((t - ini) * 10) / 10; // segundos de fade de entrada (sobreposição)
+    eventos.push([Math.round(ini * 10) / 10, Math.round(dur * 10) / 10, f.idx, slot ? slot.g.k : -1, entra]);
+    anterior = f; antCortada = dur < f.dur - 0.5;
+    t = ini;
     ultimaVez.set(f.idx, t); ultimoIdx = f.idx;
     if (f.artista) ultimoArtista.set(f.artista.toLowerCase(), t);
     t += dur;
@@ -223,7 +245,7 @@ async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   const faixas = await lerAcervo();
   await processar(faixas);
-  if (r2Configurado()) faixas.push(...await lerAcervoR2({ tratar, regras, log }));
+  if (r2Configurado()) faixas.push(...await lerAcervoR2({ tratar, regras, log, versao: VERSAO_TRATAMENTO }));
   else log('R2 não configurado: usando só o acervo do repositório');
   // Faixas fora do ar: o arquivo continua guardado, mas não entra na programação.
   const norm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -240,7 +262,7 @@ async function main() {
   log('acervo:', JSON.stringify(cont));
 
   const eventos = montarProgramacao(prog, faixas, regras);
-  const horas = eventos.reduce((a, e) => a + e[1], 0) / 3600;
+  const horas = eventos.length ? (eventos[eventos.length - 1][0] + eventos[eventos.length - 1][1] - eventos[0][0]) / 3600 : 0;
   log(`programação: ${eventos.length} entradas, ${horas.toFixed(1)} h de ${DIAS_CICLO * 24} h cobertas`);
 
   const playout = {
@@ -253,6 +275,14 @@ async function main() {
     slots: prog.grade.map((g) => ({ t: g.titulo, k: g.tipo, l: g.link || undefined })),
     e: eventos,
   };
+  // TV Tec ao vivo: pega o vídeo atual da página oficial (se a TVTEC trocar a live, a rádio acompanha).
+  if (prog.tvAoVivo?.site) {
+    try {
+      const html = await (await fetch(prog.tvAoVivo.site, { signal: AbortSignal.timeout(15000), headers: { 'user-agent': 'Mozilla/5.0 RadioTec' } })).text();
+      const m = html.match(/youtube(?:-nocookie)?\.com\/embed\/([\w-]{11})/);
+      if (m && m[1] !== prog.tvAoVivo.youtube) { log(`TV ao vivo: vídeo atualizado pelo site (${m[1]})`); prog.tvAoVivo.youtube = m[1]; }
+    } catch (e) { log(`TV ao vivo: não consegui ler o site (${e.message}), mantendo o vídeo configurado`); }
+  }
   playout.versao = crypto.createHash('sha1').update(JSON.stringify([playout.faixas, playout.slots, playout.e])).digest('hex').slice(0, 12);
   copiarPasta(path.join(ROOT, 'site'), OUT);
   fs.writeFileSync(path.join(OUT, 'playout.json'), JSON.stringify(playout));

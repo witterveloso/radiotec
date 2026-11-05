@@ -358,7 +358,7 @@ const audio = $('audio');
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
 const VISIVEL = ['musica', 'programa', 'podcast'];
-let P = null, PROG = null, skew = 0, cur = -1, playing = false, fading = false, starting = false, PENDENTE = null;
+let P = null, PROG = null, skew = 0, cur = -1, playing = false, starting = false, PENDENTE = null;
 
 // Ondas do player e menu do celular
 $('wave').innerHTML = Array.from({ length: 22 }, (_, i) => `<i style="height:${30 + Math.round(Math.abs(Math.sin(i * 1.7)) * 70)}%;animation-delay:${(i % 7) * -0.13}s"></i>`).join('');
@@ -388,77 +388,130 @@ async function carregar() {
   atualizarTela(); hojeNaGrade(); listas();
 }
 
-// Sempre ao vivo: o áudio entra no ponto exato em que a programação está agora,
-// e é corrigido de novo quando realmente começa a tocar (descontando o tempo de carregar).
-function tocar(idx) {
-  const e = P.e[idx], f = P.faixas[e[2]];
-  cur = idx; fading = false; starting = true;
-  const off = Math.max(0, pos() - e[0]);
-  audio.src = off > 1 ? `${f.f}#t=${off.toFixed(2)}` : f.f; // já pede o áudio a partir do ponto certo
-  audio.volume = +vol.value;
-  const alinhar = () => {
-    if (cur !== idx) return;
-    const esperado = pos() - e[0];
-    if (esperado > 0 && esperado < e[1] && Math.abs(audio.currentTime - esperado) > 0.6) {
-      try { audio.currentTime = esperado; } catch {}
-    }
+// ---------- Motor de áudio profissional ----------
+// Dois "decks", como numa mesa de som: enquanto um toca, o outro já carrega a próxima faixa.
+// Na hora marcada, a faixa nova entra com crossfade curto por cima do fim da anterior.
+// Sempre ao vivo: quem dá play entra no ponto exato em que a programação está agora.
+const vol = $('vol');
+const decks = [audio, new Audio()];
+decks.forEach((d) => { d.preload = 'auto'; d.setAttribute('playsinline', ''); });
+// iPhone e iPad não deixam o site controlar o volume: lá a troca é direta, sem crossfade, mas sem buraco.
+const VOLUME_OK = (() => { try { const t = new Audio(); t.volume = 0.5; return Math.abs(t.volume - 0.5) < 0.01; } catch { return false; } })();
+let ativo = 0;
+const deckEvento = [-1, -1];
+const rampas = [null, null];
+const volume = () => +vol.value;
+
+function rampa(i, de, para, segundos, fim) {
+  if (rampas[i]) cancelAnimationFrame(rampas[i]);
+  const d = decks[i];
+  if (!VOLUME_OK || segundos <= 0) { try { d.volume = para; } catch {} rampas[i] = null; fim && fim(); return; }
+  const t0 = performance.now();
+  const passo = () => {
+    const k = Math.min(1, (performance.now() - t0) / (segundos * 1000));
+    const curva = para > de ? Math.sin(k * Math.PI / 2) : Math.cos(k * Math.PI / 2); // curva de potência constante
+    d.volume = Math.max(0, Math.min(1, para > de ? de + (para - de) * curva : para + (de - para) * curva));
+    if (k < 1) rampas[i] = requestAnimationFrame(passo); else { rampas[i] = null; fim && fim(); }
   };
-  audio.addEventListener('loadedmetadata', alinhar, { once: true });
-  audio.addEventListener('playing', () => { alinhar(); starting = false; }, { once: true });
+  rampas[i] = requestAnimationFrame(passo);
+  // segurança: requestAnimationFrame para em segundo plano, então garante o fim do fade
+  setTimeout(() => { if (rampas[i]) { cancelAnimationFrame(rampas[i]); rampas[i] = null; d.volume = para; fim && fim(); } }, segundos * 1000 + 400);
+}
+function parar(i) { const d = decks[i]; if (rampas[i]) cancelAnimationFrame(rampas[i]); rampas[i] = null; d.pause(); d.removeAttribute('src'); d.load(); deckEvento[i] = -1; }
+
+function preparar(i, idx, off = 0) {
+  const d = decks[i], f = P.faixas[P.e[idx][2]];
+  if (deckEvento[i] === idx && off < 0.5) return; // já carregada (pré-carga)
+  d.src = off > 1 ? `${f.f}#t=${off.toFixed(2)}` : f.f;
+  deckEvento[i] = idx;
+}
+
+/** Coloca o evento idx no ar. fade = segundos de crossfade com o que estava tocando (0 = entrada direta). */
+function tocar(idx, fade = 0) {
+  const e = P.e[idx];
+  const off = Math.max(0, pos() - e[0]);
+  const anterior = ativo;
+  const usarOutro = VOLUME_OK && fade > 0 && !decks[anterior].paused;
+  const i = usarOutro ? 1 - anterior : anterior;
+  if (!usarOutro && VOLUME_OK) parar(1 - anterior);
+  cur = idx; starting = true;
+  preparar(i, idx, off);
+  const d = decks[i];
+  if (off > 0.3 && d.readyState > 0 && Math.abs(d.currentTime - off) > 0.3) { try { d.currentTime = off; } catch {} }
+  const alinhar = () => {
+    if (cur !== idx || ativo !== i) return;
+    const esperado = pos() - e[0];
+    if (esperado > 0 && esperado < e[1] && Math.abs(d.currentTime - esperado) > 0.6) { try { d.currentTime = esperado; } catch {} }
+  };
+  d.addEventListener('loadedmetadata', alinhar, { once: true });
+  d.addEventListener('playing', () => { alinhar(); starting = false; }, { once: true });
+  if (usarOutro) {
+    d.volume = 0;
+    rampa(i, 0, volume(), fade);
+    const velho = anterior;
+    rampa(velho, decks[velho].volume, 0, fade, () => { if (ativo !== velho) parar(velho); });
+  } else {
+    try { d.volume = volume(); } catch {}
+  }
+  ativo = i;
   // play() na hora do toque: o iPhone só libera o som se for chamado direto no clique
-  const pr = audio.play();
+  const pr = d.play();
   if (pr) pr.catch((err) => { if (err?.name === 'NotAllowedError') { setPlaying(false); starting = false; } });
   setTimeout(() => { if (cur === idx) starting = false; }, 8000);
   atualizarTela();
 }
 
-function proximo() {
-  if (!playing) return;
-  if (PENDENTE) { P = PENDENTE; PENDENTE = null; ultimoIdx = -2; tocar(achar(pos())); listas(); return; }
-  const idx = achar(pos() + 0.05);
-  if (idx === cur && pos() < P.e[idx][0]) return; // intervalo vazio: espera a próxima faixa
-  tocar(idx);
+function sincronizar(fade = 0) { // volta para o ponto ao vivo
+  if (PENDENTE) { P = PENDENTE; PENDENTE = null; ultimoIdx = -2; listas(); }
+  tocar(achar(pos() + 0.05), fade);
 }
 
-// Relógio do player: troca de faixa no horário exato, faz fade em faixas cortadas e corrige atraso.
+// Relógio do player: pré-carrega, faz o crossfade na hora exata e corrige atrasos.
 setInterval(() => {
   if (!P || !P.e.length) return;
   if (!playing) { atualizarTela(); return; }
   if (cur < 0 || starting) return;
-  const p = pos(), e = P.e[cur], fim = e[0] + e[1];
-  const dentro = p >= e[0] - 1 && p < fim;
-  if (!dentro) { proximo(); return; }
-  const f = P.faixas[e[2]];
-  if (e[1] < f.d - 1 && fim - p < 2.5 && !fading) { // faixa encurtada para o programa entrar na hora
-    fading = true; const v0 = audio.volume; const t0 = performance.now();
-    const step = () => { const k = Math.max(0, 1 - (performance.now() - t0) / 2400); audio.volume = v0 * k; if (k > 0 && fading) requestAnimationFrame(step); };
-    step();
+  const p = pos(), e = P.e[cur], fimAtual = e[0] + e[1];
+  const prox = (cur + 1) % P.e.length, en = P.e[prox];
+  const virou = prox === 0 ? p < e[0] : p >= en[0] - 0.02; // fim do ciclo de 28 dias
+  if (virou) {
+    if (PENDENTE) { sincronizar(1); return; }
+    if (p - en[0] > 3 || (prox !== 0 && p > en[0] + en[1])) { sincronizar(0); return; } // ficou muito para trás
+    tocar(prox, en[4] || 0); return;
   }
-  const esperado = p - e[0];
-  if (!audio.paused && audio.readyState > 2 && Math.abs(audio.currentTime - esperado) > 1.5) audio.currentTime = esperado; // corrige atrasos (internet travou, aba em segundo plano)
+  if (p < e[0] - 1 || p > fimAtual + 1) { sincronizar(0); return; }
+  // pré-carga da próxima faixa no deck livre
+  if (VOLUME_OK && en[0] - p < 15 && deckEvento[1 - ativo] !== prox && !rampas[1 - ativo]) preparar(1 - ativo, prox);
+  // faixa encurtada para o programa entrar na hora: fade de saída
+  const f = P.faixas[e[2]];
+  if (e[1] < f.d - 1 && fimAtual - p < 2.5 && !rampas[ativo] && decks[ativo].volume > 0.01) rampa(ativo, decks[ativo].volume, 0, Math.max(0.3, fimAtual - p));
+  const d = decks[ativo], esperado = p - e[0];
+  if (!d.paused && d.readyState > 2 && !rampas[0] && !rampas[1] && Math.abs(d.currentTime - esperado) > 1.5) { try { d.currentTime = esperado; } catch {} }
   atualizarTela();
-}, 250);
-audio.addEventListener('ended', () => setTimeout(proximo, 50));
+}, 100);
+
+decks.forEach((d, i) => {
+  d.addEventListener('ended', () => { if (playing && i === ativo) setTimeout(() => sincronizar(0), 30); });
+  d.addEventListener('waiting', () => { if (playing && i === ativo) $('msg').textContent = 'Carregando o áudio…'; });
+  d.addEventListener('playing', () => { if (i === ativo) $('msg').textContent = ''; });
+  d.addEventListener('error', () => { if (playing && i === ativo && d.getAttribute('src')) { $('msg').textContent = 'Reconectando…'; setTimeout(() => sincronizar(0), 2000); } });
+});
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || !playing || cur < 0 || !P) return;
-  const e = P.e[cur], p = pos();
-  if (p < e[0] - 1 || p >= e[0] + e[1]) proximo();
-  else if (Math.abs(audio.currentTime - (p - e[0])) > 1.5) audio.currentTime = p - e[0];
+  const e = P.e[cur], p = pos(), d = decks[ativo];
+  if (p < e[0] - 1 || p >= e[0] + e[1]) sincronizar(0);
+  else if (Math.abs(d.currentTime - (p - e[0])) > 1.5) d.currentTime = p - e[0];
 });
-audio.addEventListener('waiting', () => playing && ($('msg').textContent = 'Carregando o áudio…'));
-audio.addEventListener('playing', () => ($('msg').textContent = ''));
-audio.addEventListener('error', () => { if (playing) { $('msg').textContent = 'Reconectando…'; setTimeout(proximo, 2000); } });
 
 function alternar() {
   if (!P || !P.e.length) return;
-  if (playing) { setPlaying(false); audio.pause(); audio.removeAttribute('src'); audio.load(); cur = -1; return; }
-  setPlaying(true); tocar(achar(pos()));
+  if (playing) { setPlaying(false); parar(0); parar(1); cur = -1; return; }
+  setPlaying(true); tocar(achar(pos()), 0);
 }
 $('play').onclick = alternar;
 $('ouca').onclick = () => { if (!playing) alternar(); else $('player').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
-const vol = $('vol');
 const pintaVol = () => vol.style.setProperty('--v', `${vol.value * 100}%`);
-vol.oninput = () => { pintaVol(); if (!fading) audio.volume = +vol.value; };
+vol.oninput = () => { pintaVol(); if (!rampas[ativo]) try { decks[ativo].volume = volume(); } catch {} };
 pintaVol();
 function setPlaying(p) {
   playing = p; $('player').classList.toggle('playing', p);
@@ -549,13 +602,13 @@ function montarTV() {
   if (tv.descricao) $('tvDesc').textContent = tv.descricao;
   $('tvLink').href = `https://www.youtube.com/watch?v=${encodeURIComponent(tv.youtube)}`;
   if (tv.site) { $('tvSite').href = tv.site; $('tvSite').hidden = false; }
-  $('tvFrame').innerHTML = `<iframe id="ytTV" src="https://www.youtube.com/embed/${encodeURIComponent(tv.youtube)}?enablejsapi=1&rel=0&playsinline=1&origin=${encodeURIComponent(location.origin)}" title="${esc(tv.titulo || 'TV Tec ao vivo')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>`;
+  $('tvFrame').innerHTML = `<iframe id="ytTV" src="https://www.youtube.com/embed/${encodeURIComponent(tv.youtube)}?enablejsapi=1&rel=0&playsinline=1&origin=${encodeURIComponent(location.origin)}" title="${esc(tv.titulo || 'TV Tec ao vivo')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
   const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
 }
 window.onYouTubeIframeAPIReady = () => {
   ytPlayer = new YT.Player('ytTV', { events: {
     onStateChange: (e) => { if (e.data === YT.PlayerState.PLAYING && playing) alternar(); }, // TV tocando: pausa a rádio
-    onError: () => tvReserva(), // vídeo indisponível ou bloqueado: mostra o site da TVTEC
+    onError: (ev) => { if ([100, 101, 150, 5].includes(ev.data)) tvReserva(); }, // vídeo removido, privado ou bloqueado para incorporar
   } });
 };
 // Reserva: se o YouTube falhar, oferece a transmissão no site da TVTEC
@@ -565,8 +618,6 @@ function tvReserva() {
   const site = tv.site || `https://www.youtube.com/watch?v=${encodeURIComponent(tv.youtube)}`;
   $('tvFrame').insertAdjacentHTML('beforeend', `<div class="reserva"><div><p>A transmissão não abriu aqui na página.</p><a class="btn" href="${esc(site)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Assistir no site da TVTEC</a></div></div>`);
 }
-// Se o player do YouTube nem carregar (bloqueio de rede), usa a reserva depois de 12 s.
-setTimeout(() => { if (PROG?.tvAoVivo && !ytPlayer?.getPlayerState) tvReserva(); }, 12000);
 const _alternar = alternar;
 alternar = function () { if (!playing && ytPlayer?.pauseVideo) try { ytPlayer.pauseVideo(); } catch {} _alternar(); }; // rádio tocando: pausa a TV
 $('play').onclick = () => alternar();
