@@ -24,7 +24,7 @@ const CICLO_S = DIAS_CICLO * 86400;
 
 const PASTAS = { musicas: 'musica', vinhetas: 'vinheta', horacerta: 'horacerta', comerciais: 'comercial', podcasts: 'podcast', programas: 'programa' };
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-const AUDIO = /\.(mp3|m4a|aac|wav|flac|ogg|opus)$/i;
+const AUDIO = /\.(mp3|m4a|aac|wav|flac|ogg|opus|mp4|m4v|mov|mkv|webm|avi|mpg|mpeg|mxf)$/i; // vídeo também: o áudio é extraído
 
 const log = (...a) => console.log('[radiotec]', ...a);
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };

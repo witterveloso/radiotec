@@ -8,7 +8,7 @@ import { pipeline } from 'node:stream/promises';
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { parseFile } from 'music-metadata';
 
-const AUDIO = /\.(mp3|m4a|aac|wav|flac|ogg|opus)$/i;
+const AUDIO = /\.(mp3|m4a|aac|wav|flac|ogg|opus|mp4|m4v|mov|mkv|webm|avi|mpg|mpeg|mxf)$/i; // vídeo também: o áudio é extraído
 const PASTAS = { musicas: 'musica', vinhetas: 'vinheta', horacerta: 'horacerta', comerciais: 'comercial', podcasts: 'podcast', programas: 'programa' };
 const INDICE = '_tratado/indice.json';
 
