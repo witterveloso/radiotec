@@ -9,7 +9,8 @@ import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, Del
 import { parseFile } from 'music-metadata';
 
 const AUDIO = /\.(mp3|m4a|aac|wav|flac|ogg|opus|mp4|m4v|mov|mkv|webm|avi|mpg|mpeg|mxf)$/i; // vídeo também: o áudio é extraído
-const PASTAS = { musicas: 'musica', vinhetas: 'vinheta', horacerta: 'horacerta', comerciais: 'comercial', podcasts: 'podcast', programas: 'programa' };
+const PASTAS = { musicas: 'musica', vinhetas: 'vinheta', horacerta: 'horacerta', comerciais: 'comercial', podcasts: 'podcast', programas: 'programa', noticias: 'noticia' };
+const pastaDe = (nome) => PASTAS[String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()];
 const INDICE = '_tratado/indice.json';
 
 // Remove espaços e quebras de linha que costumam vir junto ao colar as chaves.
@@ -65,7 +66,7 @@ export async function lerAcervoR2({ tratar, regras, log, versao = '' }) {
   }
 
   const chaveTrat = `${regras.volumeLUFS}_${regras.bitrate}_${versao}`;
-  const originais = objetos.filter((o) => !o.key.startsWith('_') && AUDIO.test(o.key) && PASTAS[o.key.split('/')[0]]);
+  const originais = objetos.filter((o) => !o.key.startsWith('_') && AUDIO.test(o.key) && pastaDe(o.key.split('/')[0]));
   const trabalho = path.join(os.tmpdir(), 'radiotec-r2');
   fs.mkdirSync(trabalho, { recursive: true });
 
@@ -76,7 +77,7 @@ export async function lerAcervoR2({ tratar, regras, log, versao = '' }) {
     while (fila.length) {
       const o = fila.shift();
       const partes = o.key.split('/');
-      const cat = PASTAS[partes[0]];
+      const cat = pastaDe(partes[0]);
       const id = crypto.createHash('sha1').update(`${o.key}|${o.etag}|${chaveTrat}`).digest('hex').slice(0, 16);
       let info = indice[id];
       if (!info) {

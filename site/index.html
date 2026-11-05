@@ -357,7 +357,7 @@ const $ = (id) => document.getElementById(id);
 const audio = $('audio');
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-const VISIVEL = ['musica', 'programa', 'podcast'];
+const VISIVEL = ['musica', 'programa', 'podcast', 'noticia'];
 let P = null, PROG = null, skew = 0, cur = -1, playing = false, starting = false, PENDENTE = null;
 
 // Ondas do player e menu do celular

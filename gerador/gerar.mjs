@@ -22,7 +22,8 @@ export const ANCORA = Date.parse('2026-01-04T00:00:00-03:00');
 const DIAS_CICLO = 28;
 const CICLO_S = DIAS_CICLO * 86400;
 
-const PASTAS = { musicas: 'musica', vinhetas: 'vinheta', horacerta: 'horacerta', comerciais: 'comercial', podcasts: 'podcast', programas: 'programa' };
+const PASTAS = { musicas: 'musica', vinhetas: 'vinheta', horacerta: 'horacerta', comerciais: 'comercial', podcasts: 'podcast', programas: 'programa', noticias: 'noticia' };
+const pastaDe = (nome) => PASTAS[String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()];
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
 const AUDIO = /\.(mp3|m4a|aac|wav|flac|ogg|opus|mp4|m4v|mov|mkv|webm|avi|mpg|mpeg|mxf)$/i; // vídeo também: o áudio é extraído
 
@@ -45,7 +46,9 @@ const hashArquivo = (p) => crypto.createHash('sha1').update(fs.readFileSync(p)).
 
 async function lerAcervo() {
   const faixas = [];
-  for (const [pasta, cat] of Object.entries(PASTAS)) {
+  const pastasLocais = fs.existsSync(path.join(ROOT, 'acervo')) ? fs.readdirSync(path.join(ROOT, 'acervo')).filter((n) => pastaDe(n)) : [];
+  for (const pasta of pastasLocais) {
+    const cat = pastaDe(pasta);
     for (const arq of listar(path.join(ROOT, 'acervo', pasta)).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))) {
       let meta = {};
       try { meta = await parseFile(arq, { duration: true }); } catch { /* sem tags */ }
@@ -185,6 +188,11 @@ export function montarProgramacao(prog, faixas, regras) {
     else s = Math.min(0.6, xf); // vinheta, hora certa e comercial colados na música
     return Math.min(s, ant.dur * 0.25, atual.dur * 0.25);
   }
+  // Regra "depois de cada podcast": toca o(s) áudio(s) indicado(s) em seguida, em rodízio.
+  const normT = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const regraApos = normT(prog.depoisDoPodcast);
+  const aposPodcast = regraApos ? faixas.filter((f) => normT(f.titulo).includes(regraApos) || normT(f.nomeArq).includes(regraApos)) : [];
+  let posApos = 0, pedeApos = false;
   const eventos = [];
   let anterior = null, antCortada = false;
   let t = 0, posRel = 0, horaRel = -1, chaveSlot = null, posProg = 0, vazios = 0;
@@ -200,8 +208,12 @@ export function montarProgramacao(prog, faixas, regras) {
     if (resta < 3) { t = limite; continue; }
 
     let f = null;
+    if (pedeApos && aposPodcast.length) { const cand = aposPodcast[posApos++ % aposPodcast.length]; if (cand.dur <= resta) f = cand; }
+    pedeApos = false;
     const arquivosPrograma = slot?.g.tipo === 'programa' ? (porPrograma[slot.g.programa] || []) : [];
-    if (posProg < arquivosPrograma.length) {
+    if (f) {
+      // já escolhido pela regra "depois do podcast"
+    } else if (posProg < arquivosPrograma.length) {
       f = arquivosPrograma[posProg++];
     } else {
       const rel = relogioDe(slot?.g.relogio);
@@ -223,6 +235,7 @@ export function montarProgramacao(prog, faixas, regras) {
     const entra = Math.round((t - ini) * 10) / 10; // segundos de fade de entrada (sobreposição)
     eventos.push([Math.round(ini * 10) / 10, Math.round(dur * 10) / 10, f.idx, slot ? slot.g.k : -1, entra]);
     anterior = f; antCortada = dur < f.dur - 0.5;
+    if (f.cat === 'podcast') pedeApos = true;
     t = ini;
     ultimaVez.set(f.idx, t); ultimoIdx = f.idx;
     if (f.artista) ultimoArtista.set(f.artista.toLowerCase(), t);
@@ -245,6 +258,7 @@ async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   const faixas = await lerAcervo();
   await processar(faixas);
+  if (prog.depoisDoPodcast) log(`regra: depois de cada podcast toca "${prog.depoisDoPodcast}"`);
   if (r2Configurado()) faixas.push(...await lerAcervoR2({ tratar, regras, log, versao: VERSAO_TRATAMENTO }));
   else log('R2 não configurado: usando só o acervo do repositório');
   // Faixas fora do ar: o arquivo continua guardado, mas não entra na programação.
