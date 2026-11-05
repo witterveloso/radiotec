@@ -388,17 +388,27 @@ async function carregar() {
   atualizarTela(); hojeNaGrade(); listas();
 }
 
+// Sempre ao vivo: o áudio entra no ponto exato em que a programação está agora,
+// e é corrigido de novo quando realmente começa a tocar (descontando o tempo de carregar).
 function tocar(idx) {
   const e = P.e[idx], f = P.faixas[e[2]];
   cur = idx; fading = false; starting = true;
-  audio.src = f.f;
-  audio.volume = +$('vol').value;
-  const iniciar = () => {
-    const off = Math.max(0, pos() - e[0]);
-    if (off > 0.5 && off < e[1]) audio.currentTime = off;
-    audio.play().catch(() => setPlaying(false)).finally(() => (starting = false));
+  const off = Math.max(0, pos() - e[0]);
+  audio.src = off > 1 ? `${f.f}#t=${off.toFixed(2)}` : f.f; // já pede o áudio a partir do ponto certo
+  audio.volume = +vol.value;
+  const alinhar = () => {
+    if (cur !== idx) return;
+    const esperado = pos() - e[0];
+    if (esperado > 0 && esperado < e[1] && Math.abs(audio.currentTime - esperado) > 0.6) {
+      try { audio.currentTime = esperado; } catch {}
+    }
   };
-  audio.addEventListener('loadedmetadata', iniciar, { once: true });
+  audio.addEventListener('loadedmetadata', alinhar, { once: true });
+  audio.addEventListener('playing', () => { alinhar(); starting = false; }, { once: true });
+  // play() na hora do toque: o iPhone só libera o som se for chamado direto no clique
+  const pr = audio.play();
+  if (pr) pr.catch((err) => { if (err?.name === 'NotAllowedError') { setPlaying(false); starting = false; } });
+  setTimeout(() => { if (cur === idx) starting = false; }, 8000);
   atualizarTela();
 }
 
@@ -425,10 +435,16 @@ setInterval(() => {
     step();
   }
   const esperado = p - e[0];
-  if (!audio.paused && audio.readyState > 2 && Math.abs(audio.currentTime - esperado) > 3) audio.currentTime = esperado;
+  if (!audio.paused && audio.readyState > 2 && Math.abs(audio.currentTime - esperado) > 1.5) audio.currentTime = esperado; // corrige atrasos (internet travou, aba em segundo plano)
   atualizarTela();
 }, 250);
 audio.addEventListener('ended', () => setTimeout(proximo, 50));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !playing || cur < 0 || !P) return;
+  const e = P.e[cur], p = pos();
+  if (p < e[0] - 1 || p >= e[0] + e[1]) proximo();
+  else if (Math.abs(audio.currentTime - (p - e[0])) > 1.5) audio.currentTime = p - e[0];
+});
 audio.addEventListener('waiting', () => playing && ($('msg').textContent = 'Carregando o áudio…'));
 audio.addEventListener('playing', () => ($('msg').textContent = ''));
 audio.addEventListener('error', () => { if (playing) { $('msg').textContent = 'Reconectando…'; setTimeout(proximo, 2000); } });
