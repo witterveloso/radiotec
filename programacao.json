@@ -24,16 +24,15 @@
         "vinheta",
         "musica",
         "musica",
+        "podcast",
         "vinheta",
         "musica",
         "musica",
+        "podcast",
         "comercial",
         "musica",
         "musica",
-        "vinheta",
-        "musica",
-        "musica",
-        "musica"
+        "podcast"
       ]
     },
     "madrugada": {
@@ -43,13 +42,14 @@
         "vinheta",
         "musica",
         "musica",
+        "podcast",
         "musica",
         "musica",
+        "podcast",
         "vinheta",
         "musica",
         "musica",
-        "musica",
-        "musica"
+        "podcast"
       ]
     }
   },
