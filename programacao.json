@@ -4,7 +4,8 @@
   "tvAoVivo": {
     "titulo": "TV Tec ao vivo",
     "descricao": "Acompanhe ao vivo a programação da TVTEC Jundiaí.",
-    "youtube": "EV4KhKfftIQ"
+    "youtube": "EV4KhKfftIQ",
+    "site": "https://tvtecjundiai.com.br/ao-vivo/"
   },
   "repositorio": "witterveloso/radiotec",
   "armazenamento": {

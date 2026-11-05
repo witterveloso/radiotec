@@ -145,6 +145,8 @@
   .tv .badge { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .12em; color: #fff; background: #e53935; padding: 5px 12px; border-radius: 99px; }
   .tv .badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse 1.6s infinite; }
   .tv .yt { color: var(--teal); font-weight: 600; text-decoration: none; font-size: 14px; }
+  .tv .reserva { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; background: radial-gradient(circle at 50% 30%, #0f5f9c, #042B63 75%); }
+  .tv .reserva p { margin: 0 0 14px; color: #d6e3f3; }
   .tv .nota { font-size: 13px; color: var(--muted); margin: 16px 0 0; }
   @media (max-width: 980px) { .tv { grid-template-columns: 1fr; } }
 
@@ -279,6 +281,7 @@
           <h3 id="tvTitulo">TV Tec ao vivo</h3>
           <p id="tvDesc">Acompanhe ao vivo a programação da TVTEC Jundiaí.</p>
           <a class="yt" id="tvLink" target="_blank" rel="noopener">Assistir no YouTube ›</a>
+          <a class="yt" id="tvSite" target="_blank" rel="noopener" hidden style="display:block;margin-top:6px">Assistir no site da TVTEC ›</a>
           <p class="nota">Quando você der play na TV, a rádio pausa sozinha para o som não misturar.</p>
         </div>
       </div>
@@ -510,14 +513,25 @@ function montarTV() {
   $('tvTitulo').textContent = tv.titulo || 'TV Tec ao vivo';
   if (tv.descricao) $('tvDesc').textContent = tv.descricao;
   $('tvLink').href = `https://www.youtube.com/watch?v=${encodeURIComponent(tv.youtube)}`;
+  if (tv.site) { $('tvSite').href = tv.site; $('tvSite').hidden = false; }
   $('tvFrame').innerHTML = `<iframe id="ytTV" src="https://www.youtube.com/embed/${encodeURIComponent(tv.youtube)}?enablejsapi=1&rel=0&playsinline=1&origin=${encodeURIComponent(location.origin)}" title="${esc(tv.titulo || 'TV Tec ao vivo')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>`;
   const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
 }
 window.onYouTubeIframeAPIReady = () => {
-  ytPlayer = new YT.Player('ytTV', { events: { onStateChange: (e) => {
-    if (e.data === YT.PlayerState.PLAYING && playing) alternar(); // TV tocando: pausa a rádio
-  } } });
+  ytPlayer = new YT.Player('ytTV', { events: {
+    onStateChange: (e) => { if (e.data === YT.PlayerState.PLAYING && playing) alternar(); }, // TV tocando: pausa a rádio
+    onError: () => tvReserva(), // vídeo indisponível ou bloqueado: mostra o site da TVTEC
+  } });
 };
+// Reserva: se o YouTube falhar, oferece a transmissão no site da TVTEC
+// (o site não permite ser exibido dentro de outra página, então abre em nova aba).
+function tvReserva() {
+  const tv = PROG?.tvAoVivo; if (!tv) return;
+  const site = tv.site || `https://www.youtube.com/watch?v=${encodeURIComponent(tv.youtube)}`;
+  $('tvFrame').insertAdjacentHTML('beforeend', `<div class="reserva"><div><p>A transmissão não abriu aqui na página.</p><a class="btn" href="${esc(site)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Assistir no site da TVTEC</a></div></div>`);
+}
+// Se o player do YouTube nem carregar (bloqueio de rede), usa a reserva depois de 12 s.
+setTimeout(() => { if (PROG?.tvAoVivo && !ytPlayer?.getPlayerState) tvReserva(); }, 12000);
 const _alternar = alternar;
 alternar = function () { if (!playing && ytPlayer?.pauseVideo) try { ytPlayer.pauseVideo(); } catch {} _alternar(); }; // rádio tocando: pausa a TV
 $('play').onclick = () => alternar();
