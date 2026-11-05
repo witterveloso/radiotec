@@ -137,6 +137,17 @@
   .soon p { margin: 0; color: #c2d3e8; }
   .soon a { color: var(--teal); font-weight: 600; text-decoration: none; }
 
+  .tv { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: center; background: linear-gradient(160deg, rgba(11,79,138,.5), rgba(4,43,99,.85)); border: 1px solid rgba(0,199,166,.45); border-radius: 24px; padding: 20px; }
+  .tv .frame { position: relative; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid var(--line); }
+  .tv iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .tv .info h3 { font: 700 24px Montserrat, sans-serif; margin: 10px 0 8px; }
+  .tv .info p { margin: 0 0 16px; color: #c2d3e8; }
+  .tv .badge { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .12em; color: #fff; background: #e53935; padding: 5px 12px; border-radius: 99px; }
+  .tv .badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse 1.6s infinite; }
+  .tv .yt { color: var(--teal); font-weight: 600; text-decoration: none; font-size: 14px; }
+  .tv .nota { font-size: 13px; color: var(--muted); margin: 16px 0 0; }
+  @media (max-width: 980px) { .tv { grid-template-columns: 1fr; } }
+
   footer { border-top: 1px solid var(--line); padding: 32px 0 40px; color: var(--muted); font-size: 14px; }
   footer .wrap { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
   footer svg { width: 92px; }
@@ -192,6 +203,7 @@
     <a class="brand" href="#" aria-label="Rádio Tec, início"><svg viewBox="0 0 220 150"><use href="#logo"/></svg></a>
     <nav id="nav">
       <a class="home" href="#" aria-label="Início"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg></a>
+      <a href="#tv">TV ao vivo</a>
       <a href="#programacao">Programação</a>
       <a href="#podcasts">Podcasts</a>
       <a href="#noticias">Notícias</a>
@@ -257,6 +269,20 @@
       <a class="link" href="#ultimos"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5 3.5-5 3.5z"/></svg>Últimos programas<svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
       <a class="link" href="#programacao"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>Grade<svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
     </div>
+
+    <section class="blk" id="tv" hidden>
+      <div class="sh"><h2>TV Tec ao vivo</h2></div>
+      <div class="tv">
+        <div class="frame" id="tvFrame"></div>
+        <div class="info">
+          <span class="badge">AO VIVO</span>
+          <h3 id="tvTitulo">TV Tec ao vivo</h3>
+          <p id="tvDesc">Acompanhe ao vivo a programação da TVTEC Jundiaí.</p>
+          <a class="yt" id="tvLink" target="_blank" rel="noopener">Assistir no YouTube ›</a>
+          <p class="nota">Quando você der play na TV, a rádio pausa sozinha para o som não misturar.</p>
+        </div>
+      </div>
+    </section>
 
     <section class="blk" id="programacao">
       <div class="sh"><h2>Programação</h2></div>
@@ -476,7 +502,28 @@ setInterval(() => { if (P) { hojeNaGrade(); listas(); } }, 60000);
 // Confere atualizações da programação a cada 15 min; a troca acontece no fim da faixa atual.
 setInterval(() => { fetch(`playout.json?v=${Date.now()}`, { cache: 'no-store' }).then((r) => r.json()).then((d) => { if ((d.versao || d.gerado) !== (P.versao || P.gerado)) { if (playing) PENDENTE = d; else { P = d; ultimoIdx = -2; listas(); } } }).catch(() => {}); }, 15 * 60000);
 
-carregar().catch(() => ($('msg').textContent = 'Não foi possível carregar a programação.'));
+// ---------- TV Tec ao vivo (YouTube) ----------
+let ytPlayer = null;
+function montarTV() {
+  const tv = PROG?.tvAoVivo; if (!tv?.youtube) return;
+  $('tv').hidden = false;
+  $('tvTitulo').textContent = tv.titulo || 'TV Tec ao vivo';
+  if (tv.descricao) $('tvDesc').textContent = tv.descricao;
+  $('tvLink').href = `https://www.youtube.com/watch?v=${encodeURIComponent(tv.youtube)}`;
+  $('tvFrame').innerHTML = `<iframe id="ytTV" src="https://www.youtube.com/embed/${encodeURIComponent(tv.youtube)}?enablejsapi=1&rel=0&playsinline=1&origin=${encodeURIComponent(location.origin)}" title="${esc(tv.titulo || 'TV Tec ao vivo')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>`;
+  const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
+}
+window.onYouTubeIframeAPIReady = () => {
+  ytPlayer = new YT.Player('ytTV', { events: { onStateChange: (e) => {
+    if (e.data === YT.PlayerState.PLAYING && playing) alternar(); // TV tocando: pausa a rádio
+  } } });
+};
+const _alternar = alternar;
+alternar = function () { if (!playing && ytPlayer?.pauseVideo) try { ytPlayer.pauseVideo(); } catch {} _alternar(); }; // rádio tocando: pausa a TV
+$('play').onclick = () => alternar();
+$('ouca').onclick = () => { if (!playing) alternar(); else $('player').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+
+carregar().then(montarTV).catch(() => ($('msg').textContent = 'Não foi possível carregar a programação.'));
 </script>
 </body>
 </html>

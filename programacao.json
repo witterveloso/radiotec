@@ -1,6 +1,11 @@
 {
   "radio": "Rádio Tec",
   "slogan": "Conteúdo, cultura e conexão",
+  "tvAoVivo": {
+    "titulo": "TV Tec ao vivo",
+    "descricao": "Acompanhe ao vivo a programação da TVTEC Jundiaí.",
+    "youtube": "EV4KhKfftIQ"
+  },
   "repositorio": "witterveloso/radiotec",
   "armazenamento": {
     "painel": "https://dash.cloudflare.com/555b4a54dec3d097c90bc3826983a20a/r2/default/buckets/radiotec",
