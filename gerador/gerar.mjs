@@ -168,6 +168,14 @@ export function montarProgramacao(prog, faixas, regras) {
     const okMus = (f) => t - (ultimaVez.get(f.idx) ?? -1e9) >= sep;
     const okArt = (f) => !musica || !f.artista || t - (ultimoArtista.get(f.artista.toLowerCase()) ?? -1e9) >= sepArt;
     const okCabe = (f) => !cabe || f.dur <= cabe;
+    if (['podcast', 'noticia'].includes(cat)) { // fala nunca é cortada: só entra se couber inteira
+      const pool = lista.filter((f) => okCabe(f) && f.idx !== ultimoIdx);
+      const ok = pool.filter(okMus);
+      const usar = ok.length ? ok : pool;
+      if (!usar.length) return null;
+      usar.sort((a, b) => (ultimaVez.get(a.idx) ?? -1e9) - (ultimaVez.get(b.idx) ?? -1e9));
+      return usar[0];
+    }
     for (const ok of [(f) => okMus(f) && okArt(f) && okCabe(f), (f) => okMus(f) && okArt(f), okMus, (f) => f.idx !== ultimoIdx, () => true]) {
       const pool = lista.filter(ok);
       if (!pool.length) continue;
@@ -180,8 +188,10 @@ export function montarProgramacao(prog, faixas, regras) {
   const relogioDe = (nome) => prog.relogios[nome] || prog.relogios[prog.relogioPadrao] || { itens: ['musica'] };
   // Crossfade: quanto a faixa nova "entra por cima" do fim da anterior, em segundos.
   const xf = regras.crossfade ?? 2;
+  const FALA = new Set(['podcast', 'noticia', 'programa']);
   function sobreposicao(ant, atual, antCortada) {
     if (!ant || antCortada || atual.cat === 'programa' || ant.cat === 'programa') return 0; // programa entra limpo, na hora exata
+    if (FALA.has(ant.cat)) return 0; // fala termina inteira: nada entra por cima
     let s;
     if (ant.cat === 'musica' && atual.cat === 'musica') s = xf;
     else if (atual.cat === 'podcast' || ant.cat === 'podcast') s = Math.min(1, xf);
@@ -222,7 +232,8 @@ export function montarProgramacao(prog, faixas, regras) {
         const repeticao = posRel >= rel.itens.length;
         posRel++;
         if (repeticao && (item === 'horacerta' || item.categoria === 'horacerta')) continue;
-        f = escolher(item, t, resta < 900 ? resta : 0);
+        const catItem = typeof item === 'string' ? item : item.categoria;
+        f = escolher(item, t, resta < 900 || ['podcast', 'noticia'].includes(catItem) ? resta : 0);
       }
     }
     if (!f) { // acervo vazio: avança um minuto

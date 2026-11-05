@@ -426,30 +426,42 @@ function preparar(i, idx, off = 0) {
   deckEvento[i] = idx;
 }
 
-/** Coloca o evento idx no ar. fade = segundos de crossfade com o que estava tocando (0 = entrada direta). */
-function tocar(idx, fade = 0) {
-  const e = P.e[idx];
-  const off = Math.max(0, pos() - e[0]);
+// Regra de ouro: nada que não seja música é cortado ou adiantado (fala, notícia, podcast, vinheta, spot, hora certa).
+// Se o áudio demora a carregar, este ouvinte fica alguns segundos "atrás" do ao vivo (atraso),
+// e essa diferença é recuperada encurtando o finalzinho das próximas músicas, com fade.
+const PROTEGIDO = (c) => c !== 'musica';
+let atraso = 0;
+const pv = () => pos() - atraso; // relógio deste ouvinte
+
+/** Coloca o evento idx no ar. fade = crossfade com o que estava tocando. aoVivo = entrada pelo botão play. */
+function tocar(idx, fade = 0, aoVivo = false) {
+  const e = P.e[idx], f = P.faixas[e[2]];
+  let off = 0;
+  if (aoVivo) {
+    atraso = 0;
+    off = Math.max(0, pos() - e[0]);
+    if (PROTEGIDO(f.c) && off < 10) { atraso = off; off = 0; } // pegou o começo de uma fala: toca desde o início
+  }
   const anterior = ativo;
-  const usarOutro = VOLUME_OK && fade > 0 && !decks[anterior].paused;
+  const usarOutro = VOLUME_OK && !aoVivo; // usa o deck que já pré-carregou a faixa
   const i = usarOutro ? 1 - anterior : anterior;
   if (!usarOutro && VOLUME_OK) parar(1 - anterior);
   cur = idx; starting = true;
   preparar(i, idx, off);
   const d = decks[i];
   if (off > 0.3 && d.readyState > 0 && Math.abs(d.currentTime - off) > 0.3) { try { d.currentTime = off; } catch {} }
-  const alinhar = () => {
+  if (!off && d.readyState > 0 && d.currentTime > 0.05) { try { d.currentTime = 0; } catch {} }
+  d.addEventListener('playing', () => {
+    starting = false;
     if (cur !== idx || ativo !== i) return;
-    const esperado = pos() - e[0];
-    if (esperado > 0 && esperado < e[1] && Math.abs(d.currentTime - esperado) > 0.6) { try { d.currentTime = esperado; } catch {} }
-  };
-  d.addEventListener('loadedmetadata', alinhar, { once: true });
-  d.addEventListener('playing', () => { alinhar(); starting = false; }, { once: true });
+    const lag = pv() - e[0] - d.currentTime; // quanto demorou para começar
+    if (lag > 0.25) atraso += lag; // não pula nada: este ouvinte só fica um pouco atrás
+  }, { once: true });
   if (usarOutro) {
-    d.volume = 0;
-    rampa(i, 0, volume(), fade);
     const velho = anterior;
-    rampa(velho, decks[velho].volume, 0, fade, () => { if (ativo !== velho) parar(velho); });
+    if (f.c === 'musica' && fade > 0) { d.volume = 0; rampa(i, 0, volume(), fade); } // música entra com fade
+    else { try { d.volume = volume(); } catch {} } // fala entra no volume cheio, desde a 1ª sílaba
+    rampa(velho, decks[velho].volume, 0, Math.max(0.3, fade || 0.3), () => { if (ativo !== velho) parar(velho); });
   } else {
     try { d.volume = volume(); } catch {}
   }
@@ -461,52 +473,68 @@ function tocar(idx, fade = 0) {
   atualizarTela();
 }
 
-function sincronizar(fade = 0) { // volta para o ponto ao vivo
+function sincronizar() { // volta para o ponto ao vivo (só em casos extremos, como celular que ficou sem internet)
   if (PENDENTE) { P = PENDENTE; PENDENTE = null; ultimoIdx = -2; listas(); }
-  tocar(achar(pos() + 0.05), fade);
+  tocar(achar(pos() + 0.05), 0, true);
 }
 
-// Relógio do player: pré-carrega, faz o crossfade na hora exata e corrige atrasos.
+let ultimaTroca = 0;
+function seguinte() { // passa para a próxima faixa da programação, sem pular nada
+  if (performance.now() - ultimaTroca < 300) return; // trava contra troca dupla
+  ultimaTroca = performance.now();
+  if (PENDENTE) { // programação nova: entra na faixa equivalente do mesmo horário
+    P = PENDENTE; PENDENTE = null; ultimoIdx = -2; listas();
+    const k = achar(pv() + 0.05); cur = (k - 1 + P.e.length) % P.e.length;
+  }
+  const prox = (cur + 1) % P.e.length, en = P.e[prox];
+  if (atraso > 120) { sincronizar(); return; } // ficou muito para trás (internet caiu): volta ao vivo
+  tocar(prox, en[4] || 0);
+}
+
+// Relógio do player: pré-carrega, troca na hora certa, mede e recupera atrasos.
 setInterval(() => {
   if (!P || !P.e.length) return;
   if (!playing) { atualizarTela(); return; }
   if (cur < 0 || starting) return;
-  const p = pos(), e = P.e[cur], fimAtual = e[0] + e[1];
-  const prox = (cur + 1) % P.e.length, en = P.e[prox];
-  const virou = prox === 0 ? p < e[0] : p >= en[0] - 0.02; // fim do ciclo de 28 dias
-  if (virou) {
-    if (PENDENTE) { sincronizar(1); return; }
-    if (p - en[0] > 3 || (prox !== 0 && p > en[0] + en[1])) { sincronizar(0); return; } // ficou muito para trás
-    tocar(prox, en[4] || 0); return;
+  const d = decks[ativo], e = P.e[cur], f = P.faixas[e[2]];
+  // o relógio deste ouvinte acompanha o que realmente está tocando (se travou, fica atrás em vez de pular)
+  if (!d.paused && d.readyState > 2 && !rampas[ativo]) {
+    const lag = pv() - e[0] - d.currentTime;
+    if (lag > 0.5 || lag < -1) atraso = Math.max(-2, atraso + lag);
   }
-  if (p < e[0] - 1 || p > fimAtual + 1) { sincronizar(0); return; }
+  const p = pv();
+  const prox = (cur + 1) % P.e.length, en = P.e[prox];
+  // recuperação do atraso: só no fim de músicas, até 6 s por música, com fade
+  const adianta = f.c === 'musica' && atraso > 0.5 ? Math.min(atraso, 6, e[1] * 0.3) : 0;
+  const inicioProx = prox === 0 ? e[0] + e[1] : en[0];
+  if (p >= inicioProx - adianta - 0.02) {
+    if (adianta) atraso -= adianta;
+    seguinte(); return;
+  }
   // pré-carga da próxima faixa no deck livre
-  if (VOLUME_OK && en[0] - p < 15 && deckEvento[1 - ativo] !== prox && !rampas[1 - ativo]) preparar(1 - ativo, prox);
-  // faixa encurtada para o programa entrar na hora: fade de saída
-  const f = P.faixas[e[2]];
-  if (e[1] < f.d - 1 && fimAtual - p < 2.5 && !rampas[ativo] && decks[ativo].volume > 0.01) rampa(ativo, decks[ativo].volume, 0, Math.max(0.3, fimAtual - p));
-  const d = decks[ativo], esperado = p - e[0];
-  if (!d.paused && d.readyState > 2 && !rampas[0] && !rampas[1] && Math.abs(d.currentTime - esperado) > 1.5) { try { d.currentTime = esperado; } catch {} }
+  if (VOLUME_OK && inicioProx - p < 15 && deckEvento[1 - ativo] !== prox && !rampas[1 - ativo]) preparar(1 - ativo, prox);
+  // música encurtada (para programa entrar na hora ou para recuperar atraso): fade de saída
+  const fimAtual = Math.min(e[0] + e[1], inicioProx - adianta);
+  if (f.c === 'musica' && (e[1] < f.d - 1 || adianta) && fimAtual - p < 2 && !rampas[ativo] && d.volume > 0.01) rampa(ativo, d.volume, 0, Math.max(0.3, fimAtual - p));
   atualizarTela();
 }, 100);
 
 decks.forEach((d, i) => {
-  d.addEventListener('ended', () => { if (playing && i === ativo) setTimeout(() => sincronizar(0), 30); });
+  // terminou antes da hora (arquivo um pouco mais curto): segue direto para a próxima, sem silêncio
+  d.addEventListener('ended', () => { if (!playing || i !== ativo || starting) return; const era = cur; setTimeout(() => { if (cur === era && !starting) seguinte(); }, 20); }); // nunca avança duas vezes
   d.addEventListener('waiting', () => { if (playing && i === ativo) $('msg').textContent = 'Carregando o áudio…'; });
   d.addEventListener('playing', () => { if (i === ativo) $('msg').textContent = ''; });
-  d.addEventListener('error', () => { if (playing && i === ativo && d.getAttribute('src')) { $('msg').textContent = 'Reconectando…'; setTimeout(() => sincronizar(0), 2000); } });
+  d.addEventListener('error', () => { if (playing && i === ativo && d.getAttribute('src')) { $('msg').textContent = 'Reconectando…'; setTimeout(sincronizar, 2000); } });
 });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || !playing || cur < 0 || !P) return;
-  const e = P.e[cur], p = pos(), d = decks[ativo];
-  if (p < e[0] - 1 || p >= e[0] + e[1]) sincronizar(0);
-  else if (Math.abs(d.currentTime - (p - e[0])) > 1.5) d.currentTime = p - e[0];
+  if (decks[ativo].paused || atraso > 120) sincronizar(); // o celular pausou o som em segundo plano
 });
 
 function alternar() {
   if (!P || !P.e.length) return;
   if (playing) { setPlaying(false); parar(0); parar(1); cur = -1; return; }
-  setPlaying(true); tocar(achar(pos()), 0);
+  setPlaying(true); tocar(achar(pos()), 0, true);
 }
 $('play').onclick = alternar;
 $('ouca').onclick = () => { if (!playing) alternar(); else $('player').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
@@ -526,7 +554,7 @@ if ('mediaSession' in navigator) {
 // ---------- Tela ----------
 let ultimoIdx = -2;
 function atualizarTela() {
-  const p = pos(), idx = playing && cur >= 0 ? cur : achar(p), e = P.e[idx], f = P.faixas[e[2]];
+  const p = playing ? pv() : pos(), idx = playing && cur >= 0 ? cur : achar(p), e = P.e[idx], f = P.faixas[e[2]];
   const slot = e[3] >= 0 ? P.slots[e[3]] : null;
   const decorrido = Math.min(e[1], Math.max(0, p - e[0]));
   $('prog').style.width = `${decorrido / e[1] * 100}%`;
