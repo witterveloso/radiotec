@@ -300,6 +300,7 @@ async function main() {
   playout.versao = crypto.createHash('sha1').update(JSON.stringify([playout.faixas, playout.slots, playout.e])).digest('hex').slice(0, 12);
   copiarPasta(path.join(ROOT, 'site'), OUT);
   fs.writeFileSync(path.join(OUT, 'playout.json'), JSON.stringify(playout));
+  fs.writeFileSync(path.join(OUT, 'versao.json'), JSON.stringify({ versao: playout.versao, gerado: playout.gerado })); // arquivo leve que o player consulta todo minuto
   fs.writeFileSync(path.join(OUT, 'programacao.json'), JSON.stringify(prog, null, 2));
   fs.writeFileSync(path.join(OUT, 'acervo.json'), JSON.stringify(faixas.map((f) => ({ origem: f.origem, cat: f.cat, programa: f.programa, titulo: f.titulo, artista: f.artista, genero: f.genero, dur: Math.round(f.dur) }))));
   fs.writeFileSync(path.join(OUT, '.nojekyll'), '');

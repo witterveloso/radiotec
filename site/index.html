@@ -591,7 +591,18 @@ function listas() {
 
 setInterval(() => { if (P) { hojeNaGrade(); listas(); } }, 60000);
 // Confere atualizações da programação a cada 15 min; a troca acontece no fim da faixa atual.
-setInterval(() => { fetch(`playout.json?v=${Date.now()}`, { cache: 'no-store' }).then((r) => r.json()).then((d) => { if ((d.versao || d.gerado) !== (P.versao || P.gerado)) { if (playing) PENDENTE = d; else { P = d; ultimoIdx = -2; listas(); } } }).catch(() => {}); }, 15 * 60000);
+// Confere a cada 1 minuto se saiu programação nova (arquivo leve); só baixa a grade quando mudou.
+// Tocando, a troca acontece na próxima faixa, sem cortar a atual.
+setInterval(async () => {
+  if (!P) return;
+  try {
+    const v = await (await fetch(`versao.json?v=${Date.now()}`, { cache: 'no-store' })).json();
+    if (!v.versao || v.versao === P.versao || v.versao === PENDENTE?.versao) return;
+    const d = await (await fetch(`playout.json?v=${Date.now()}`, { cache: 'no-store' })).json();
+    try { PROG = await (await fetch(`programacao.json?v=${Date.now()}`, { cache: 'no-store' })).json(); } catch {}
+    if (playing) PENDENTE = d; else { P = d; ultimoIdx = -2; listas(); hojeNaGrade(); }
+  } catch {}
+}, 60000);
 
 // ---------- TV Tec ao vivo (YouTube) ----------
 let ytPlayer = null;
